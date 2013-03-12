@@ -152,6 +152,10 @@
   		stroke: #000;
   		fill:red;
  	}
+ 	.invDot {
+  		stroke: steelblue;
+  		fill:steelblue;
+ 	}
  	.transectLine {
 	  fill: none;
 	  stroke: red;

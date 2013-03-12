@@ -6,15 +6,9 @@ dojo.require("esri.dijit.TimeSlider");
 dojo.require("esri.dijit.Scalebar");
 dojo.require("esri.IdentityManager");
 dojo.require("esri.geometry");
-dojo.require("dojox.charting.Chart");
-dojo.require("dojox.charting.plot2d.Default");
-dojo.require("dojox.charting.axis2d.Default");
-dojo.require("dojox.charting.themes.Wetland");
-dojo.require("dojox.charting.themes.Shrooms");
-dojo.require("dojox/charting/Theme");
-dojo.require("dojox.charting.plot2d.StackedAreas");
 dojo.require("esri.tasks.geometry");
 dojo.require("dojo/json");
+
 
   var map, urlObject, tb;
   var timeSlider;
@@ -23,6 +17,7 @@ dojo.require("dojo/json");
   var returnTable = null;
   var transectFeatures = null;
   var mode = "PointMode";
+  var chart = null;
   
   
    function initMap() {
@@ -117,90 +112,21 @@ dojo.require("dojo/json");
           alert(i18n.viewer.errors.createMap + " : " +  error.message);
         });
         
-        
-        //var theme = dojo.getObject('dojox.charting.themes.Wetland');
-        var theme = dojo.getObject('dojox.charting.themes.Shrooms');
-        theme.chart.fill = '#e3e9ee';
-        theme.plotarea.fill = "#e3e9ee";
-        theme.fill = "#e3e9ee";
-        
-        var type = dojo.getObject('dojox.charting.plot2d.StackedAreas')
-        
-        //createChart(null);
-        
-        /*
-        chartOne = new dojox.charting.Chart("chartOne")
-        		.addPlot("other", {type: type, tension:3})
-        		.addPlot("default", {type: "Lines"})
-        		.addAxis("x", {fixLower: "major", fixUpper: "major"})
-        		.addAxis("y", {vertical: true, fixLower: "major", fixUpper: "major", min: 0})
-        		.setTheme(theme)
-        		//.addSeries("Series A", [1, 2, 0.5, 1.5, 1, 2.8, 0.4])
-        		
-				.render(); 	*/
     }
+    
     
     function createChart(table)
     {
-    	
-    	var oldSVG = d3.select("#panel").select("svg");
-    	if(oldSVG != null)
-    		oldSVG.remove();
-    	
+    	if(chart == null)
+    		chart = new D3Charting();
+    		
+    	chart.remove();
+    	    	
     	var timeExtent = map.timeExtent
 		var endDate = timeExtent.endTime;
-			
-		var margin = {top: 10, right: 1, bottom: 30, left: 50},
-    	width = 240 - margin.left - margin.right,
-    	height = 315 - margin.top - margin.bottom;
-		
-		var x = d3.time.scale().range([0, width]);
-		
-		var y = d3.scale.linear().range([height, 0]);
-	
-		var xAxis = d3.svg.axis().scale(x).orient("bottom").ticks(4);
-		
-	
-		var yAxis = d3.svg.axis().scale(y).orient("left");
-		
-	
-		var line = d3.svg.line().x(function(d) {
-			return x(d.attributes.time);
-		}).y(function(d) {
-			return y(d.attributes.INUNDATION_RECURRENCE);
-		});		
-		
-		var area = d3.svg.area().x(function(d) {
-			return x(d.attributes.time);
-		}).y0(height).y1(function(d) {
-			return y(d.attributes.INUNDATION_RECURRENCE);
-		}); 
-			
-		var panel= d3.select("#panel");
-		var svg = d3.select("#panel").append("svg")
-			    .attr("width", width + margin.left + margin.right)
-			    .attr("height", height + margin.top + margin.bottom)
-			  	.append("g")
-			    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-					
-
-		d3.json(table.features);
-		
-		
-		x.domain(d3.extent(table.features, function(d) {
-			return d.attributes.time;
-		}));
-		
-		y.domain(d3.extent(table.features, function(d) {
-			return d.attributes.INUNDATION_RECURRENCE;
-		})); 
-
-		svg.append("g").attr("class", "x axis").attr("transform", "translate(0," + height + ")").call(xAxis);
-	
-		svg.append("g").attr("class", "y axis").call(yAxis).append("text").attr("transform", "rotate(-90)").attr("y", 6).attr("dy", ".71em").style("text-anchor", "end").text("INUNDATION RECURRENCE");
-	
-		svg.append("path").datum(table.features).attr("class", "line").attr("d", line);
-		
+				
+		//We fill in the graph up the latest date within the current time range of the map.
+		//This lets the user see what the current value is.
 		var fillArea = [];
 		for(var index =0; index < table.features.length; index++)
 		{
@@ -211,21 +137,21 @@ dojo.require("dojo/json");
 				break;
 		}
 		
-		svg.append("path").datum(fillArea).attr("class", "area").attr("d", area);
-		
+		chart.createTimeSeriesChart(table.features, fillArea);		
     }
     
     function createTransectPlot()
     {
-    	var oldSVG = d3.select("#panel").select("svg");
-    	if(oldSVG != null)
-    		oldSVG.remove();
+    	if(chart == null)
+    		chart = new D3Charting();
+    	
+    	chart.remove();
     	
     	var timeExtent = map.timeExtent
 		var endDate = timeExtent.endTime;
-		
+			
+    	//Creating a transect plot of the values closest to the end date of our time range.
 		var transectPlot = []
-		
 		for(var index =0; index < returnTable.length; index++)
 		{
 			var trasectFeat = transectFeatures[index];
@@ -234,8 +160,8 @@ dojo.require("dojo/json");
 			var features = table.features;
 	  	    for (var f=0, fl=features.length; f<fl; f++) {
 	          var feature = features[f];
-	          var value = feature.attributes.INUNDATION_RECURRENCE;
-	          var timeValue = feature.attributes.time;
+	          var value = feature.attributes.INUNDATION_RECURRENCE; //TODO:  Make template
+	          var timeValue = feature.attributes.time; //TODO:  Make template
 	          
 	          //Get the latest date  			          
 	          if(timeValue <= endDate)
@@ -249,62 +175,8 @@ dojo.require("dojo/json");
 	          	break;
 	        }
 		}
-			
-		var margin = {top: 10, right: 1, bottom: 30, left: 50},
-    	width = 240 - margin.left - margin.right,
-    	height = 315 - margin.top - margin.bottom;
 		
-		//var x = d3.time.scale().range([0, width]);
-		var x = d3.scale.linear().range([0, width]);
-		
-		var y = d3.scale.linear().range([height, 0]);
-	
-		var xAxis = d3.svg.axis().scale(x).orient("bottom").ticks(3);
-		
-	
-		var yAxis = d3.svg.axis().scale(y).orient("left");
-		
-	
-		var line = d3.svg.line().x(function(d) {
-			return x(d.distance);
-		}).y(function(d) {
-			return y(d.value);
-		});		
-		
-			
-		var panel= d3.select("#panel");
-		var svg = d3.select("#panel").append("svg")
-			    .attr("width", width + margin.left + margin.right)
-			    .attr("height", height + margin.top + margin.bottom)
-			  	.append("g")
-			    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-					
-
-		d3.json(transectPlot);
-		
-		
-		x.domain(d3.extent(transectPlot, function(d) {
-			return d.distance;
-		}));
-		
-		y.domain(d3.extent(transectPlot, function(d) {
-			return d.value;
-		})); 
-
-		svg.append("g").attr("class", "x axis").attr("transform", "translate(0," + height + ")").call(xAxis);
-	
-		svg.append("g").attr("class", "y axis").call(yAxis).append("text").attr("transform", "rotate(-90)").attr("y", 6).attr("dy", ".71em").style("text-anchor", "end").text("INUNDATION RECURRENCE");
-	
-		//svg.append("path").datum(transectPlot).attr("class", "line").attr("d", line);
-		svg.append("path").datum(transectPlot).attr("class", "transectLine").attr("d", line);
-		
-		svg.selectAll(".dot")
-      		.data(transectPlot)
-    		.enter().append("circle")
-      		.attr("class", "dot")
-      		.attr("r", 3.5)
-      		.attr("cx", function(d) { return x(d.distance); })
-      		.attr("cy", function(d) { return y(d.value); });
+		chart.createTransectPlot(transectPlot);
     }
 
 	function addGraphic(geometry) {
@@ -509,14 +381,12 @@ dojo.require("dojo/json");
 	 function clearGraphics() {
 
 	    map.graphics.clear()
-	    chartOne.removeSeries("Series A");    
-	    chartOne.removeSeries("TimeArea");    
-	    chartOne.render();
+	    removePlot();
 	    
 	    returnTable = null;
 	    
 	  }
-   
+	     
    function initUI(layers) {
    			
    	tb = new esri.toolbars.Draw(map);
