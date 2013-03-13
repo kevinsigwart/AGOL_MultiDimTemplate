@@ -18,6 +18,7 @@ dojo.require("dojo/json");
   var transectFeatures = null;
   var mode = "PointMode";
   var chart = null;
+  var esriMapOb = null;
   
   
    function initMap() {
@@ -113,277 +114,32 @@ dojo.require("dojo/json");
         });
         
     }
-    
-    
-    function createChart(table)
-    {
-    	if(chart == null)
-    		chart = new D3Charting();
-    		
-    	chart.remove();
-    	    	
-    	var timeExtent = map.timeExtent
-		var endDate = timeExtent.endTime;
-				
-		//We fill in the graph up the latest date within the current time range of the map.
-		//This lets the user see what the current value is.
-		var fillArea = [];
-		for(var index =0; index < table.features.length; index++)
-		{
-			var feat = table.features[index];
-			if(feat.attributes.time < endDate)
-				fillArea.push(feat);
-			else
-				break;
-		}
-		
-		chart.createTimeSeriesChart(table.features, fillArea);		
-    }
-    
-    function createTransectPlot()
-    {
-    	if(chart == null)
-    		chart = new D3Charting();
-    	
-    	chart.remove();
-    	
-    	var timeExtent = map.timeExtent
-		var endDate = timeExtent.endTime;
-			
-    	//Creating a transect plot of the values closest to the end date of our time range.
-		var transectPlot = []
-		for(var index =0; index < returnTable.length; index++)
-		{
-			var trasectFeat = transectFeatures[index];
-			var transectDistance = parseInt(trasectFeat.attributes.Distance);
-			var table = returnTable[index];
-			var features = table.features;
-	  	    for (var f=0, fl=features.length; f<fl; f++) {
-	          var feature = features[f];
-	          var value = feature.attributes.INUNDATION_RECURRENCE; //TODO:  Make template
-	          var timeValue = feature.attributes.time; //TODO:  Make template
-	          
-	          //Get the latest date  			          
-	          if(timeValue <= endDate)
-	          {
-	          	var plotLoc = [];
-	          	plotLoc.value = value;
-	          	plotLoc.distance = transectDistance;
-	          	transectPlot[index] = plotLoc;	
-	          }
-	          else
-	          	break;
-	        }
-		}
-		
-		chart.createTransectPlot(transectPlot);
-    }
 
 	function addGraphic(geometry) {
+		
+		tb.deactivate();
+		
+		if(esriMapOb == null)
+			esriMapOb = new esriMap(map);
 
 		  var type = geometry.type;
           if (type === "point" || type === "multipoint") {
           	mode = "PointMode";
-            addPointToMap(geometry);
+          	esriMapOb.addPointToMap(geometry);
+            //addPointToMap(geometry);
           }
           else if (type === "line" || type === "polyline") {
           	mode = "LineMode";
-            addLineToMap(geometry);
+          	esriMapOb.addTransectToMap(geometry);
+            //addLineToMap(geometry);
           }        
 	  }
-	  
-	  function addLineToMap(geometry)
-	  {
-	  		tb.deactivate();
-	  		
-	  		var symbol = new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255,0,0]), 3);
-	  		var graphic = new esri.Graphic(geometry,symbol);
-	  		map.graphics.clear();
-	  		map.graphics.add(graphic);
-	  		
-	  		var markerSymbol = new esri.symbol.SimpleMarkerSymbol();	    
-		    markerSymbol.setSize(12);
-		    markerSymbol.setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([0,0,0]), 1));
-	        markerSymbol.setColor(new dojo.Color([255,0,0,0.75]));
-	  		
 
-	  		var polyline = geometry;
-	  		var path = polyline.paths[0];
-	  		
-	  		returnTable = [];
-			resultCount = path.length;
-			transectFeatures = [];
-			
-			var subsetPolylines = [];
-						
-		    for(index = 0; index < path.length; index++)
-		    {
-		    	var pnt = path[index];
-		    	var pntGeom = new esri.geometry.Point(pnt);
-		    	
-		    	
-		    	//Creating a new Polyline to get the distance between the points.
-		    	if(index > 0)
-		    	{
-		    		var pnt2 = path[index - 1];
-		    		var pntGeom = new esri.geometry.Point(pnt);
-		    		var subsetPolyline = new esri.geometry.Polyline(geometry.spatialReference);
-		    		subsetPolyline.addPath([pnt, pnt2]);
-		    		
-		    		subsetPolylines.push(subsetPolyline);
-		    	}
-		    	
-		    	var pntGraphic = new esri.Graphic(pntGeom,markerSymbol);
-		    	map.graphics.add(pntGraphic);
-		    	
-		    	var attributes = new Array();
-		    	attributes.OBJECTID = index;
-		    		
-			    var repoGeom = esri.geometry.webMercatorToGeographic(pntGeom);
-			    var repoGraphic = new esri.Graphic(repoGeom,symbol);
-			    repoGraphic.attributes = attributes;
-			    
-		        transectFeatures.push(repoGraphic);
-		    }
-		    
-		    if(subsetPolylines.length > 0)
-		    {
-		    	var geometryService = new esri.tasks.GeometryService("http://tasks.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer");
-				var lengthParams = new esri.tasks.LengthsParameters();
-				lengthParams.polylines = subsetPolylines;
-				lengthParams.lengthUnit = esri.tasks.GeometryService.UNIT_METER;
-				lengthParams.geodesic = true;
-				geometryService.lengths(lengthParams,getDistances);
-
-		    }
-		    		    
-	  }
-	  
-	  function getDistances(result)
-	  {
-	  	
-		var gp = new esri.tasks.Geoprocessor("http://wdcb4.esri.com/arcgis/rest/services/201212_NetCDF_Viewer/MakeNetCDFTable_Norfolk/GPServer/Make%20NetCDF%20Table%20Script");
-		    
-		if (transectFeatures.length > 0) {
-			var distances = [0];
-			var totalDistance = 0;
-			var feature = transectFeatures[0];
-			feature.attributes.Distance = 0;
-	
-			for (var index = 0; index < result.lengths.length; index++) {
-				totalDistance += result.lengths[index];
-				var feature = transectFeatures[index + 1];
-				feature.attributes.Distance = totalDistance;
-				//transectFeatures[index + 1] = feature;
-			}
-	
-			//Now that we have the distances we can query each individual point
-			var inputfeatures = [];
-			inputfeatures.push(transectFeatures[0]);
-			var featureSet = new esri.tasks.FeatureSet();
-			featureSet.features = inputfeatures;
-	
-			var params = {
-				"InputPnt" : featureSet
-			};
-			gp.execute(params, getTransect);
-		}
-	  }
-	  
-	  
-	  function getTransect(results, messages) {
-
-			var timeExtent = map.timeExtent
-			var endDate = timeExtent.endTime;
-			
-			returnTable[returnTable.length] = results[0].value; 
-			var currentIndex = returnTable.length
-			
-			var seriesValues = [];
-			
-			if(currentIndex < resultCount)
-			{
-				var inputfeatures= [];
-			    inputfeatures.push(transectFeatures[currentIndex]);
-			    var featureSet = new esri.tasks.FeatureSet();
-			    featureSet.features = inputfeatures;
-			    
-				var params = { "InputPnt":featureSet };
-				var gp = new esri.tasks.Geoprocessor("http://wdcb4.esri.com/arcgis/rest/services/201212_NetCDF_Viewer/MakeNetCDFTable_Norfolk/GPServer/Make%20NetCDF%20Table%20Script");
-			    gp.execute(params, getTransect);
-			}
-			else
-			{
-				updateChart(returnTable);  
-			}
-
-       }
-	  
-	  function addPointToMap(geometry)
-	  {
-		  	var symbol = new esri.symbol.SimpleMarkerSymbol();	    
-		    symbol.setSize(12);
-		    symbol.setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([0,0,0]), 1));
-	        symbol.setColor(new dojo.Color([255,0,0,0.75]));
-		    
-		    var graphic = new esri.Graphic(geometry,symbol);
-		    
-		    map.graphics.clear();
-		    
-		    map.graphics.add(graphic);
-		    
-		    tb.deactivate();
-		    	    
-		    var gp = new esri.tasks.Geoprocessor("http://wdcb4.esri.com/arcgis/rest/services/201212_NetCDF_Viewer/MakeNetCDFTable_Norfolk/GPServer/Make%20NetCDF%20Table%20Script");
-		    
-		    var features= [];
-		    var repoGeom = esri.geometry.webMercatorToGeographic(geometry);
-		    var repoGraphic = new esri.Graphic(repoGeom,symbol);
-	        features.push(repoGraphic);
-	        var featureSet = new esri.tasks.FeatureSet();
-	        featureSet.features = features;
-	        
-	        var params = { "InputPnt":featureSet };
-	        gp.execute(params, getTable);
-	  }
-	  
-	  function getTable(results, messages) {
-
-			
-			var seriesValues = [];
-			var seriesValuesSub = [];
-			var timeExtent = map.timeExtent
-			var endDate = timeExtent.endTime;
-			
-			returnTable = results[0].value;
-			//updateChart(returnTable);  	   
-			
-			createChart(returnTable); 
-        }
-        
-        function updateChart(table)
-        {
-        	
-        	var timeExtent = map.timeExtent
-			var endDate = timeExtent.endTime;
-				
-        	if(mode == "PointMode")
-        	{
-        		createChart(table);
-		    }
-		    else
-		    {
-		    	createTransectPlot();        	
-		    }
-        	
-        }
         
 	 function clearGraphics() {
-
-	    map.graphics.clear()
-	    removePlot();
-	    
-	    returnTable = null;
+		
+		if(esriMapOb != null)
+			esriMapOb.clearGraphics();
 	    
 	  }
 	     
@@ -489,12 +245,12 @@ dojo.require("dojo/json");
 
       }
 
-        
         dojo.byId('timeSliderLabel').innerHTML =  timeString;
-        
-        if(returnTable != null)
-        	updateChart(returnTable);  	
-        
+        if(esriMapOb != null)
+        {
+        	esriMapOb.UpdateTime();
+        }
+                
       });
 
       timeSlider.startup();
