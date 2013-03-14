@@ -31,6 +31,8 @@ function D3Charting() {
 	this.getChartingMode = d3GetChartingMode;
 	this.getSelectedGraphIndex = d3GetSelectedGraphIndex;
 	this.setSelectedGraphIndex = d3SetSelectedGraphIndex;
+	this.selectGraphPoint = d3HighlighGraphPntFromIndex;
+	this.clearSelection = d3ClearSelection;
 }
 
 /****** Get/Set Properties *******************************/
@@ -253,6 +255,26 @@ function d3MouseClick(d,i)
 /**
  *Highlights the selected point and sets the other points back to the original value 
  */
+function d3HighlighGraphPntFromIndex(selectedIndex)
+{
+	var svg = d3.select("#panel").select("svg");
+	
+	var circles = svg.selectAll(".dot");
+	for(var index = 0; index < circles[0].length; index++)
+	{
+		circles[0][index].style.fill = "red";		
+		circles[0][index].style.stroke = "black";
+		circles[0][index].setAttribute('r',3.5);
+	}
+	
+	circles[0][selectedIndex].style.fill = "cyan";		
+	circles[0][selectedIndex].style.stroke = "cyan";	
+	circles[0][selectedIndex].setAttribute('r',6);	
+}
+
+/**
+ *Highlights the selected point and sets the other points back to the original value 
+ */
 function d3HighlighTransectPoint(pnt)
 {
 	var svg = d3.select("#panel").select("svg");
@@ -268,6 +290,23 @@ function d3HighlighTransectPoint(pnt)
 	pnt.style.fill = "cyan";
 	pnt.style.stroke = "cyan";	
 	pnt.setAttribute('r',6);	
+}
+/**
+ *Clears the selected points on the graph
+ */
+function d3ClearSelection()
+{
+	var svg = d3.select("#panel").select("svg");
+
+	var circles = svg.selectAll(".dot");
+	if (circles != null && circles.length) {
+		for (var index = 0; index < circles[0].length; index++) {
+			circles[0][index].style.fill = "red";
+			circles[0][index].style.stroke = "black";
+			circles[0][index].setAttribute('r', 3.5);
+		}
+	}
+
 }
 /**
  *Adds the Plot Framework to the Application 

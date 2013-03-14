@@ -18,8 +18,12 @@ function esriMap(esrimap){
 	document.addEventListener("ChartPointSelected",graphSelectIndexChanged,false);
 	document.addEventListener("UpdateChart",graphUpdateChart,false);
 	
+	dojo.connect(map.graphics,"onClick",esriSelectGraphic);
+	dojo.connect(map.graphics,"onDblClick",esriGraphicDoubleClick);
+	
 	//Events
 	this.clearGraphics = esriMapClearGraphics;
+	this.removeSelections = esriMapRemoveSelections;
 	this.addPointToMap = esriMapAddPointToMap;
 	this.addTransectToMap = esriMapAddTransectToMap;
 	this.UpdateTime = esriMapTimeExtentChange;	
@@ -84,6 +88,68 @@ function esriMapUpdateChartTime(index)
 
 /**** Update Graphics Functions **********************************/
 /**
+ *Event Handler for when user selects a point graphic on the map. 
+ */
+function esriSelectGraphic(evt)
+{
+	var mode = chart.getChartingMode();	
+	
+	//Making sure the Graphic Selected is not the line
+	if(evt.graphic != null && evt.graphic.attributes != null && mode != "PointMode")
+	{
+		var selectedIndex = evt.graphic.attributes["OBJECTID"];
+		if(selectedIndex != null)
+		{
+			//Select The Graphic On the Map
+			esriMapSelectGraphic(selectedIndex);
+			
+			//If we are in Transect Line Mode, we just want to highlight the point on the graph
+			if(mode == "TransectLineMode")
+			{	
+				//Update Chart Selection
+				chart.setSelectedGraphIndex(selectedIndex);
+				chart.selectGraphPoint(selectedIndex);
+			}
+			else if(mode == "TransectPointMode")
+			{
+				chart.setSelectedGraphIndex(selectedIndex);
+				esriMapUpdateChartTime(selectedIndex);
+			}
+		}
+	}
+	else if(mode == "TransectPointMode")//If we just selected the line, go back to transect line graph
+	{
+		chart.setChartingMode("TransectLineMode");	
+		esriMapsClearMapGraphicSelections();
+		chart.setSelectedGraphIndex(-1);
+		esriMapCreateTransectPlot(resultTables);   
+	}
+}
+
+/**
+ *Event Listener for a graphic double click.
+ * When a Transect Graphic Point has been double clicked, drill down and get the time
+ * series for that point.  
+ */
+function esriGraphicDoubleClick(evt)
+{
+	//Making sure the Graphic Selected is not the line
+	if(evt.graphic != null && evt.graphic.attributes != null)
+	{
+		var selectedIndex = evt.graphic.attributes["OBJECTID"];
+		if(selectedIndex != null)
+		{
+			esriMapSelectGraphic(selectedIndex);
+			
+			//We want to graph that point overtime.
+			chart.setChartingMode("TransectPointMode");	
+			chart.setSelectedGraphIndex(selectedIndex);
+			esriMapUpdateChartTime(selectedIndex);
+		}
+	}
+}
+
+/**
  *Highlight the graphic on the map that is at the inputed index 
  */
 function esriMapSelectGraphic(index){
@@ -112,6 +178,25 @@ function esriMapSelectGraphic(index){
 		}
 	}	
 }
+function esriMapsClearMapGraphicSelections()
+{
+	var graphics = map.graphics.graphics;
+	var markerSymbol = new esri.symbol.SimpleMarkerSymbol();	    
+    markerSymbol.setSize(12);
+    markerSymbol.setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([0,0,0]), 1));
+    markerSymbol.setColor(new dojo.Color([255,0,0,0.75]));
+    
+    for (var i=0, il=graphics.length; i<il; i++) {
+		var graphic = graphics[i];
+		
+		if(graphic.attributes != null && graphic.attributes["OBJECTID"] != null)
+		{
+			graphic.setSymbol(markerSymbol);
+		}
+	}	
+    
+    
+}
 /**
  *Clears out the map graphics, removes the chart and sets variables to default values 
  */
@@ -121,6 +206,17 @@ function esriMapClearGraphics() {
 	chart.remove();  
 	chart.setSelectedGraphIndex(-1);
 	resultTables = [];
+}
+
+/**
+ *Clears out the map graphics, removes the chart and sets variables to default values 
+ */
+function esriMapRemoveSelections() {
+
+	chart.setSelectedGraphIndex(-1);
+	esriMapsClearMapGraphicSelections();
+	
+	chart.clearSelection();
 }
 
 /*****  Time Series Point Plot *******************************************************/

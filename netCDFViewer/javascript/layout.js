@@ -136,13 +136,21 @@ dojo.require("dojo/json");
 	  }
 
         
-	 function clearGraphics() {
-		
-		if(esriMapOb != null)
+
+	function clearGraphics() {
+	
+		if (esriMapOb != null)
 			esriMapOb.clearGraphics();
-	    
-	  }
-	     
+	
+	}
+	
+	function removeSelections() {
+	
+		if (esriMapOb != null)
+			esriMapOb.removeSelections();
+	
+	}
+
    function initUI(layers) {
    			
    	tb = new esri.toolbars.Draw(map);
