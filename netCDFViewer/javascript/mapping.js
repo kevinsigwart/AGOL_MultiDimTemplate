@@ -1,3 +1,6 @@
+dojo.require("dojo.DeferredList");
+
+//Global Variables
 var map = null;
 var transectFeatures = [];
 var gpTask = "";
@@ -381,7 +384,7 @@ function esriMapAddTransectToMap(geometry)
  */
 function esriMapGetDistanceResults(result)
 {
-	//TODO: Create a defered list instead.
+
 	var gp = new esri.tasks.Geoprocessor(gpTask); 
 
 	if (transectFeatures.length > 0) {
@@ -398,46 +401,72 @@ function esriMapGetDistanceResults(result)
 		}
 
 		//Now that we have the distances we can query each individual point
-		var inputfeatures = [];
-		inputfeatures.push(transectFeatures[0]);
-		var featureSet = new esri.tasks.FeatureSet();
-		featureSet.features = inputfeatures;
-
-		var params = {
-			"InputPnt" : featureSet
-		};
-		gp.execute(params, esriMapGetTransectResults);
+		esriMapsGetTransectValues();
 	}
 
 }
 
-function esriMapGetTransectResults(results, messages) {
+/**
+ *Takes all the input points from the transect and sends them up to the server individually.  
+ * The Deffered list makes this possible to get all the results in the order they were sent 
+ */
+function esriMapsGetTransectValues()
+{
+	var allGPTasks = [];
+	
+	dojo.forEach(transectFeatures, function(feature){
+		
+			var gp = new esri.tasks.Geoprocessor(gpTask); 
+			
+			//Now that we have the distances we can query each individual point
+			var inputfeatures = [];
+			inputfeatures.push(feature);
+			var featureSet = new esri.tasks.FeatureSet();
+			featureSet.features = inputfeatures;
+	
+			var params = {
+				"InputPnt" : featureSet
+			};
+			
+			var thisRequest = gp.execute(params);
+			
+			allGPTasks.push(thisRequest);		
 
-	var timeExtent = map.timeExtent
-	var endDate = timeExtent.endTime;
+	});
 	
-	resultTables[resultTables.length] = results[0].value; 
-	var currentIndex = resultTables.length;
+	var gpTaskDefferedList = new dojo.DeferredList(allGPTasks); 
+	gpTaskDefferedList.then(esriMapGetTransectResults);
+}
+
+/**
+ *Getting the results from the GP Tasks. 
+ */
+function esriMapGetTransectResults(results) {
+
+	var tempResults = [];
 	
-	var seriesValues = [];
-	
-	if(currentIndex < resultCount)
+	for(var index = 0; index < results.length; index++)
 	{
-		var inputfeatures= [];
-	    inputfeatures.push(transectFeatures[currentIndex]);
-	    var featureSet = new esri.tasks.FeatureSet();
-	    featureSet.features = inputfeatures;
-	    
-		var params = { "InputPnt":featureSet };
-		var gp = new esri.tasks.Geoprocessor(gpTask);
-	    gp.execute(params, esriMapGetTransectResults);
+		var result = results[index];
+		if(result[0])
+		{
+			tempResults.push(result[1][0].value);
+		}
+		else
+		{
+			tempResults = [];
+			break;
+		}
 	}
-	else
+	
+	//Making sure we got the results.
+	if(tempResults.length > 0)
 	{
+		resultTables = tempResults;
 		esriMapCreateTransectPlot(resultTables);  
 	}
+} 
 
-}
 
 /**
  *Plot the transect using the results from the GP Service 
