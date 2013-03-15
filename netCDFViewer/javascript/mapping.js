@@ -9,13 +9,19 @@ var resultTables = [];
 var chart = null;
 
 
-function esriMap(esrimap){
-	
+function esriMap(esrimap,gpTaskString){
+
 	//Properties
-	gpTask = "http://wdcb4.esri.com/arcgis/rest/services/201212_NetCDF_Viewer/MakeNetCDFTable_Norfolk/GPServer/Make%20NetCDF%20Table%20Script";
+	//gpTask = "http://wdcb4.esri.com/arcgis/rest/services/201212_NetCDF_Viewer/MakeNetCDFTable_Norfolk/GPServer/Make%20NetCDF%20Table%20Script";
+	gpTask = gpTaskString;
+	
+	//TODO: Use Geom Service Template Variable
 	geomService = "http://tasks.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer";
 	map = esrimap;
 	chart = new D3Charting();
+	
+	//Get row dimension and value variables from Output Parameters
+	getParameterValues(gpTask);
 	
 	//Event for when the chart is updated
 	document.addEventListener("ChartPointSelected",graphSelectIndexChanged,false);
@@ -31,6 +37,51 @@ function esriMap(esrimap){
 	this.addTransectToMap = esriMapAddTransectToMap;
 	this.UpdateTime = esriMapTimeExtentChange;	
 }
+
+/**********Gp Service Functions******************************************/
+/**
+ *We hit the rest end point to get the format of the output table schema.  THis way we
+ * know what the x Variable and y Variable to graph are. 
+ */
+function getParameterValues(gpTask){
+
+	//var url = gpTask + "?f=json";
+	var dataUrl = gpTask + "?f=json";
+	
+	
+	//var targetNode = dojo.byId("licenseContainer");
+	// The parameters to pass to xhrGet, the url, how to handle it, and the callbacks.
+	var xhrArgs = {
+		url : dataUrl,
+		//handleAs : "json",
+		//preventCache : true,
+		load : function(data) {
+
+			var gotFieldValues = false;
+			
+			dojo.forEach(data.parameters, function(parameter){
+				if(parameter.direction == "esriGPParameterDirectionOutput" && parameter.dataType == "GPRecordSet")
+				{
+					var table = parameter.defaultValue;
+					var rowDimFieldValue = table.fields[1].name;
+					var valueFieldValue = table.fields[2].name;
+					chart.setDimensionFieldName(rowDimFieldValue);
+					chart.setYFieldName(valueFieldValue);
+					gotFieldValues = true;
+				}
+			});
+			
+			if(!gotFieldValues)
+				alert("Invalid Input GP Service.\nPlease check your GP Service Configured Variable");
+		},
+		error : function(error) {
+			alert("Invalid Input GP Service.\nPlease check your GP Service Configured Variable");
+		}
+	}
+
+	esri.request(xhrArgs);	
+}
+
 /**************** Chart Events ******************************************/
 /**
  *When the Chart Point is selected we want to select the graphic on the map 
@@ -479,6 +530,10 @@ function esriMapCreateTransectPlot(returnTable)
 	
 	chart.remove();
 	
+	
+	var yField = chart.getYFieldName();
+	var dimField = chart.getDimensionFieldName()
+	
 	var timeExtent = map.timeExtent
 	var endDate = timeExtent.endTime;
 		
@@ -492,8 +547,8 @@ function esriMapCreateTransectPlot(returnTable)
 		var features = table.features;
   	    for (var f=0, fl=features.length; f<fl; f++) {
           var feature = features[f];
-          var value = feature.attributes.INUNDATION_RECURRENCE; //TODO:  Make template
-          var timeValue = feature.attributes.time; //TODO:  Make template
+          var value = feature.attributes[yField]; 
+          var timeValue = feature.attributes[dimField]; 
           
           //Get the latest date  			          
           if(timeValue <= endDate)

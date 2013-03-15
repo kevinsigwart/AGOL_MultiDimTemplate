@@ -10,8 +10,6 @@ var updateChartEvent;
 function D3Charting() {
 
 	//Properties
-	yValueField = "INUNDATION_RECURRENCE";
-	dimension = "time";
 	var margin = {top: 10, right: 1, bottom: 30, left: 50};
 	
 	//Events
@@ -27,6 +25,10 @@ function D3Charting() {
 	this.createTimeSeriesChart = d3CreateTimeSeriesChart;
 	this.remove = d3RemoveChart;
 	this.createTransectPlot = d3CreateTransectPlot;
+	this.setYFieldName = d3SetyFieldName;
+	this.getYFieldName = d3GetyFieldName;
+	this.setDimensionFieldName = d3SetDimensionFieldName;
+	this.getDimensionFieldName = d3GetDimensionFieldName;
 	this.setChartingMode = d3SetChartingMode;
 	this.getChartingMode = d3GetChartingMode;
 	this.getSelectedGraphIndex = d3GetSelectedGraphIndex;
@@ -36,7 +38,22 @@ function D3Charting() {
 }
 
 /****** Get/Set Properties *******************************/
-
+function d3GetyFieldName()
+{
+	return yValueField;
+}
+function d3SetyFieldName(value)
+{
+	yValueField = value;
+}
+function d3GetDimensionFieldName()
+{
+	return dimension;
+}
+function d3SetDimensionFieldName(value)
+{
+	dimension = value;
+}
 /**
  *Sets the Charting Mode.  Three Types
  *  PointMode:  Point mode is when a user clicks one point on the map.  Graphs that point over time.

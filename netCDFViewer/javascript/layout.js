@@ -52,75 +52,107 @@ dojo.require("dojo/json");
       esri.config.defaults.io.alwaysUseProxy = false;
       
 
-      
-      urlObject = esri.urlToObject(document.location.href);
-      urlObject.query = urlObject.query || {};
-      if(urlObject.query.title){
-        configOptions.title = urlObject.query.title;
-      }
-      if(urlObject.query.subtitle){
-        configOptions.title = urlObject.query.subtitle;
-      }
-      if(urlObject.query.webmap){
-        configOptions.webmap = urlObject.query.webmap;      
-      } 
-      if(urlObject.query.bingMapsKey){
-        configOptions.bingmapskey = urlObject.query.bingMapsKey;      
-      }
+	urlObject = esri.urlToObject(document.location.href);
+	urlObject.query = urlObject.query || {};
+	config = utils.applyOptions(config, urlObject.query);
 
-      
-      var itemDeferred = esri.arcgis.utils.getItem(configOptions.webmap);
-        
+	if(urlObject.query.appid)
+	{		
+		appRequest = esri.arcgis.utils.getItem(config.appid);
+
+		//getItem provides a deferred object; set onAppData to load when the request completes
+		appRequest.then(onAppData);
+	}
+	else
+	{
+		setUpMap();
+	}
      
-        var mapDeferred = esri.arcgis.utils.createMap(configOptions.webmap, "map", {
-          mapOptions: {
-            slider: true,
-            sliderStyle:'small',
-            nav: false,
-            showAttribution:true,
-            wrapAround180:true
-          },
-          ignorePopups:false,
-          bingMapsKey: configOptions.bingmapskey
-        });
-
-        mapDeferred.addCallback(function (response) {
-		  document.title = configOptions.title ||response.itemInfo.item.title;	
-          dojo.byId("title").innerHTML =  configOptions.title ||response.itemInfo.item.title;
-          dojo.byId("subtitle").innerHTML = configOptions.subtitle || response.itemInfo.item.snippet || "";
-       
-
         
-          map = response.map;
-          var layers = response.itemInfo.itemData.operationalLayers;
-          //get any time properties that are set on the map
-          if(response.itemInfo.itemData.widgets && response.itemInfo.itemData.widgets.timeSlider){
-            timeProperties =  response.itemInfo.itemData.widgets.timeSlider.properties;
-          }
-          if(map.loaded){
-              initUI(layers);
-            }
-            else{
-              dojo.connect(map,"onLoad",function(){
-                initUI(layers);
-              });
-           } 
-          //resize the map when the browser resizes
-          dojo.connect(dijit.byId('map'), 'resize', map,map.resize);
-        });
+}
+    
+function onAppData (result) {
 
-        mapDeferred.addErrback(function (error) {
-          alert(i18n.viewer.errors.createMap + " : " +  error.message);
-        });
-        
-    }
+		//The configuration properties are stored in the itemData.values property of the result
+		//Update the config variable
+		config = utils.applyOptions(config, result.itemData.values);
+		//Apply any UI changes
+		
+		console.log(result.itemData.values)
+		
+		
+		setUpMap()
+}
+
+function setUpMap() {
+	var itemDeferred = esri.arcgis.utils.getItem(config.webmap);
+
+	var mapDeferred = esri.arcgis.utils.createMap(config.webmap, "map", {
+		mapOptions : {
+			slider : true,
+			sliderStyle : 'small',
+			nav : false,
+			showAttribution : true,
+			wrapAround180 : true
+		},
+		ignorePopups : false,
+		bingMapsKey : configOptions.bingmapskey
+	});
+
+	mapDeferred.addCallback(function(response) {
+		document.title = configOptions.title || response.itemInfo.item.title;
+		dojo.byId("title").innerHTML = config.title || response.itemInfo.item.title;
+		dojo.byId("subtitle").innerHTML = config.subtitle || response.itemInfo.item.snippet || "";
+
+		map = response.map;
+		var layers = response.itemInfo.itemData.operationalLayers;
+		//get any time properties that are set on the map
+		if (response.itemInfo.itemData.widgets && response.itemInfo.itemData.widgets.timeSlider) {
+			timeProperties = response.itemInfo.itemData.widgets.timeSlider.properties;
+		}
+		if (map.loaded) {
+			initUI(layers);
+		} else {
+			dojo.connect(map, "onLoad", function() {
+				initUI(layers);
+			});
+		}
+		//resize the map when the browser resizes
+		dojo.connect(dijit.byId('map'), 'resize', map, map.resize);
+	});
+
+	mapDeferred.addErrback(function(error) {
+		alert(i18n.viewer.errors.createMap + " : " + error.message);
+	});
+}
+
+var utils = {
+	applyOptions : function(configVariable, newConfig) {
+		var q;
+
+		//Override any config options with query parameters
+		for (q in newConfig) {
+			configVariable[q] = newConfig[q];
+		}
+		return configVariable;
+	},
+	mapResize : function(mapNode) {
+		//Have the map resize on a window resize
+		dojo.connect(dijit.byId('map'), 'resize', map, map.resize);
+	},
+	onError : function(error) {
+		console.log('Error occured')
+		console.log(error);
+	}
+}	
+
 
 	function addGraphic(geometry) {
 		
 		tb.deactivate();
 		
 		if(esriMapOb == null)
-			esriMapOb = new esriMap(map);
+			esriMapOb = new esriMap(map,config.GPTaskService);
 
 		  var type = geometry.type;
           if (type === "point" || type === "multipoint") {
