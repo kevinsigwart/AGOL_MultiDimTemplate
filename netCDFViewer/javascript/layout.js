@@ -210,6 +210,8 @@ var utils = {
         style: "width: 100%;"
       }, dojo.byId("timeSliderDiv"));
       
+      timeSlider.loop = config.loop;
+      
       map.setTimeSlider(timeSlider);
       //Set time slider properties 
       timeSlider.setThumbCount(timeProperties.thumbCount);
