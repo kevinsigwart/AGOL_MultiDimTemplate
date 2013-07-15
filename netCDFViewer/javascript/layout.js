@@ -66,9 +66,7 @@ dojo.require("dojo/json");
 	else
 	{
 		setUpMap();
-	}
-     
-        
+	}        
 }
     
 function onAppData (result) {
@@ -124,6 +122,7 @@ function setUpMap() {
 	mapDeferred.addErrback(function(error) {
 		alert(i18n.viewer.errors.createMap + " : " + error.message);
 	});
+	     
 }
 
 var utils = {
@@ -167,22 +166,6 @@ var utils = {
           }        
 	  }
 
-        
-
-	function clearGraphics() {
-	
-		if (esriMapOb != null)
-			esriMapOb.clearGraphics();
-	
-	}
-	
-	function removeSelections() {
-	
-		if (esriMapOb != null)
-			esriMapOb.removeSelections();
-	
-	}
-
    function initUI(layers) {
    			
    	tb = new esri.toolbars.Draw(map);
@@ -209,6 +192,10 @@ var utils = {
       dojo.byId('legendDiv').innerHTML = i18n.tools.legend.layerMessage;
     }
     
+    
+    if(esriMapOb == null)
+		esriMapOb = new esriMap(map,config.GPTaskService);
+			
     //check to see if the web map has any time properties
     
     if(timeProperties){

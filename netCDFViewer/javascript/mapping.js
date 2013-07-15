@@ -7,6 +7,7 @@ var gpTask = "";
 var geomService = "";
 var resultTables = [];
 var chart = null;
+var inputParamaterName = "";
 
 
 function esriMap(esrimap,gpTaskString){
@@ -51,6 +52,7 @@ function getParameterValues(gpTask){
 	
 	//var targetNode = dojo.byId("licenseContainer");
 	// The parameters to pass to xhrGet, the url, how to handle it, and the callbacks.
+	//TODO:Switch to using DOJO Request/Promise
 	var xhrArgs = {
 		url : dataUrl,
 		//handleAs : "json",
@@ -58,6 +60,8 @@ function getParameterValues(gpTask){
 		load : function(data) {
 
 			var gotFieldValues = false;
+			
+			//TODO:  Check if this is asynchronous
 			
 			dojo.forEach(data.parameters, function(parameter){
 				if(parameter.direction == "esriGPParameterDirectionOutput" && parameter.dataType == "GPRecordSet")
@@ -68,6 +72,10 @@ function getParameterValues(gpTask){
 					chart.setDimensionFieldName(rowDimFieldValue);
 					chart.setYFieldName(valueFieldValue);
 					gotFieldValues = true;
+				}
+				else if(parameter.direction == "esriGPParameterDirectionInput" && parameter.dataType == "GPFeatureRecordSetLayer")
+				{
+					inputParamaterName = parameter.name;
 				}
 			});
 			
@@ -301,7 +309,9 @@ function esriMapAddPointToMap(geometry)
     var featureSet = new esri.tasks.FeatureSet();
     featureSet.features = features;
     
-    var params = { "InputPnt":featureSet };
+    var params = []; //{ inputParamaterName:featureSet };
+    params[inputParamaterName] = featureSet;
+    
     gp.execute(params, esriMapGetTable);
 }
 
@@ -475,10 +485,8 @@ function esriMapsGetTransectValues()
 			var featureSet = new esri.tasks.FeatureSet();
 			featureSet.features = inputfeatures;
 	
-			var params = {
-				"InputPnt" : featureSet
-			};
-			
+			var params = [];
+			params[inputParamaterName] = featureSet;
 			var thisRequest = gp.execute(params);
 			
 			allGPTasks.push(thisRequest);		

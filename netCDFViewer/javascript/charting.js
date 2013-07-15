@@ -116,8 +116,8 @@ function d3CreateTimeSeriesChart(features, fillArea)
 	var timeField = dimension;
 	
 	var margin = {top: 10, right: 1, bottom: 30, left: 50},
-	width = 240 - margin.left - margin.right,
-	height = 315 - margin.top - margin.bottom;
+	width = 225 - margin.left - margin.right,
+	height = 300 - margin.top - margin.bottom;
 	
 	//Adding the plot framwork to the application
 	var svg = addPlot(margin, width, height);
