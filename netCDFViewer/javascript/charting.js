@@ -115,9 +115,9 @@ function d3CreateTimeSeriesChart(features, fillArea)
 	var valueField = yValueField;
 	var timeField = dimension;
 	
-	var margin = {top: 10, right: 1, bottom: 30, left: 50},
-	width = 225 - margin.left - margin.right,
-	height = 300 - margin.top - margin.bottom;
+	var margin = {top: 10, right: 80, bottom: 20, left: 50}, //var margin = {top: 10, right: 1, bottom: 30, left: 50},
+	width = 880 - margin.left - margin.right, //225 - margin.left - margin.right,
+	height = 185 - margin.top - margin.bottom; //300 - margin.top - margin.bottom;
 	
 	//Adding the plot framwork to the application
 	var svg = addPlot(margin, width, height);
@@ -157,7 +157,7 @@ function d3CreateTimeSeriesChart(features, fillArea)
 
 	svg.append("path").datum(features).attr("class", "line").attr("d", line);
 
-	svg.append("path").datum(fillArea).attr("class", "area").attr("d", area);
+	//svg.append("path").datum(fillArea).attr("class", "area").attr("d", area);
 
 	svg.selectAll(".invDot").data(features).enter().append("circle").attr("class", "invDot").attr("r", 1.5).attr("cx", function(d) {
 		return x(d.attributes[timeField]);
@@ -166,6 +166,13 @@ function d3CreateTimeSeriesChart(features, fillArea)
 	}).append("svg:title").text(function(d) {
 		return valueField + ": " + d.attributes[valueField] + "\n" + timeField + ": " + (new Date(d.attributes[timeField])).toDateString();
 	}); 
+	
+  	//We want to highlight the current view of the map
+  	var circles = svg.selectAll(".invDot");
+	var pnt = circles[0][fillArea.length - 1];
+	pnt.style.fill = "cyan";
+	pnt.style.stroke = "black";	
+	pnt.setAttribute('r',6);	
 
 }
 
@@ -177,9 +184,14 @@ function d3CreateTransectPlot(transectPlot)
 {	
 	var valueField = yValueField;
 	
+	var margin = {top: 10, right: 80, bottom: 20, left: 50}, //var margin = {top: 10, right: 1, bottom: 30, left: 50},
+	width = 880 - margin.left - margin.right, //225 - margin.left - margin.right,
+	height = 185 - margin.top - margin.bottom; //300 - margin.top - margin.bottom;
+	
+	/*
 	var margin = {top: 10, right: 1, bottom: 30, left: 50},
 	width = 240 - margin.left - margin.right,
-	height = 315 - margin.top - margin.bottom;
+	height = 315 - margin.top - margin.bottom;*/
 			
 	//Adding the plot framwork to the application
 	var svg = addPlot(margin, width, height);
@@ -229,7 +241,7 @@ function d3CreateTransectPlot(transectPlot)
   		var circles = svg.selectAll(".dot");
   		var pnt = circles[0][selectedGraphIndex];
   		pnt.style.fill = "cyan";
-		pnt.style.stroke = "cyan";	
+		pnt.style.stroke = "black";	
 		pnt.setAttribute('r',6);	
   	}
 
@@ -305,7 +317,7 @@ function d3HighlighTransectPoint(pnt)
 	}
 		
 	pnt.style.fill = "cyan";
-	pnt.style.stroke = "cyan";	
+	pnt.style.stroke = "black";	
 	pnt.setAttribute('r',6);	
 }
 /**

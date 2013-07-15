@@ -215,6 +215,7 @@ var utils = {
       map.setTimeSlider(timeSlider);
       //Set time slider properties 
       timeSlider.setThumbCount(timeProperties.thumbCount);
+      //timeSlider.setThumbCount(1);
       timeSlider.setThumbMovingRate(timeProperties.thumbMovingRate);
       //define the number of stops
       if(timeProperties.numberOfStops){
@@ -258,7 +259,7 @@ var utils = {
           datePattern = 'h:m:s.SSS a';
           break;          
         case 'esriTimeUnitsMonths':
-          datePattern = 'MMMM d, y';
+          datePattern = 'MMMM, y';
           break;          
         case 'esriTimeUnitsSeconds':
           datePattern = 'h:m:s.SSS a';
@@ -266,8 +267,10 @@ var utils = {
       }
        var startTime=formatDate(timeExtent.startTime,datePattern);
        var endTime = formatDate(timeExtent.endTime,datePattern);
-       timeString= esri.substitute({"start_time": startTime, "end_time": endTime}, i18n.tools.time.timeRange);
+       //timeString= esri.substitute({"start_time": startTime, "end_time": endTime}, i18n.tools.time.timeRange);
        
+       //Show one month
+       timeString = esri.substitute({"time":formatDate(timeExtent.endTime,datePattern)},i18n.tools.time.timeRangeSingle);
       }
       else{
        timeString = esri.substitute({"time":formatDate(timeExtent.endTime,datePattern)},i18n.tools.time.timeRangeSingle);

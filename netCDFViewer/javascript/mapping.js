@@ -291,7 +291,8 @@ function esriMapAddPointToMap(geometry)
   	var symbol = new esri.symbol.SimpleMarkerSymbol();	    
     symbol.setSize(12);
     symbol.setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([0,0,0]), 1));
-    symbol.setColor(new dojo.Color([255,0,0,0.75]));
+    //symbol.setColor(new dojo.Color([255,0,0,0.75]));
+    symbol.setColor(new dojo.Color([0,255,255,0.75]));
     
     var graphic = new esri.Graphic(geometry,symbol);
     
