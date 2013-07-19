@@ -37,6 +37,7 @@ function D3Charting() {
 	this.clearSelection = d3ClearSelection;
 }
 
+
 /****** Get/Set Properties *******************************/
 function d3GetyFieldName()
 {
@@ -115,9 +116,15 @@ function d3CreateTimeSeriesChart(features, fillArea)
 	var valueField = yValueField;
 	var timeField = dimension;
 	
+	timeSliderWidth = document.getElementById('timeSliderDiv').offsetWidth;
+	
 	var margin = {top: 10, right: 80, bottom: 20, left: 50}, //var margin = {top: 10, right: 1, bottom: 30, left: 50},
-	width = 880 - margin.left - margin.right, //225 - margin.left - margin.right,
+	width = timeSliderWidth - 90 - margin.left - margin.right, //880 - margin.left - margin.right, //225 - margin.left - margin.right,
 	height = 185 - margin.top - margin.bottom; //300 - margin.top - margin.bottom;
+	
+	
+	
+	
 	
 	//Adding the plot framwork to the application
 	var svg = addPlot(margin, width, height);
@@ -184,8 +191,16 @@ function d3CreateTransectPlot(transectPlot)
 {	
 	var valueField = yValueField;
 	
+	/*
 	var margin = {top: 10, right: 80, bottom: 20, left: 50}, //var margin = {top: 10, right: 1, bottom: 30, left: 50},
 	width = 880 - margin.left - margin.right, //225 - margin.left - margin.right,
+	height = 185 - margin.top - margin.bottom; //300 - margin.top - margin.bottom;
+	*/
+	
+	timeSliderWidth = document.getElementById('timeSliderDiv').offsetWidth;
+	
+	var margin = {top: 10, right: 80, bottom: 20, left: 50}, //var margin = {top: 10, right: 1, bottom: 30, left: 50},
+	width = timeSliderWidth - 90 - margin.left - margin.right, //880 - margin.left - margin.right, //225 - margin.left - margin.right,
 	height = 185 - margin.top - margin.bottom; //300 - margin.top - margin.bottom;
 	
 	/*

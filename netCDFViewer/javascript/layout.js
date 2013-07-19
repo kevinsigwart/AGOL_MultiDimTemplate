@@ -44,7 +44,7 @@ dojo.require("dojo/json");
       esri.arcgis.utils.arcgisUrl = configOptions.sharingurl;
        
       if(!configOptions.proxyurl){   
-        configOptions.proxyurl = location.protocol + '//' + location.host + "/sharing/proxy";
+        configOptions.proxyurl = location.protocol + '//' + location.host + "/sharing/proxy.ashx";
       }
 
       esri.config.defaults.io.proxyUrl =  configOptions.proxyurl;
@@ -123,6 +123,14 @@ function setUpMap() {
 		alert(i18n.viewer.errors.createMap + " : " + error.message);
 	});
 	     
+}
+
+function resetLayout(){
+	if(esriMapOb != null){
+		//When the application is rezied, we want to refresh the graph
+		esriMapOb.UpdateTime();
+	}
+	
 }
 
 var utils = {
