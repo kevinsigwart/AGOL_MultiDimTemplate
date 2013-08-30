@@ -85,7 +85,7 @@ function getParameterValues(gpTask){
 		error : function(error) {
 			alert("Invalid Input GP Service.\nPlease check your GP Service Configured Variable");
 		}
-	}
+	};
 
 	esri.request(xhrArgs);	
 }
@@ -129,7 +129,7 @@ function esriMapTimeExtentChange()
  */
 function esriMapUpdateChartTime(index)
 { 	
-	var timeExtent = map.timeExtent
+	var timeExtent = map.timeExtent;
 	var endDate = timeExtent.endTime;
 	
 	var mode = chart.getChartingMode();	
@@ -277,8 +277,15 @@ function esriMapRemoveSelections() {
 
 	chart.setSelectedGraphIndex(-1);
 	esriMapsClearMapGraphicSelections();
-	
 	chart.clearSelection();
+	
+	//When the user removes the selection, we want to graph to go back to transect mode,
+	//because no points are selected.
+	if(chart.getChartingMode() == "TransectPointMode")
+	{
+		chart.setChartingMode("TransectLineMode");	
+		graphUpdateChart();
+	}
 }
 
 /*****  Time Series Point Plot *******************************************************/
@@ -323,7 +330,7 @@ function esriMapGetTable(results, messages) {
 			
 	var seriesValues = [];
 	var seriesValuesSub = [];
-	var timeExtent = map.timeExtent
+	var timeExtent = map.timeExtent;
 	var endDate = timeExtent.endTime;
 	
 	resultTables = [results[0].value];
@@ -350,7 +357,7 @@ function esriMapCreateChart(table)
  */
 function esriMapGetTimeSubsetAreaPlot(table)
 {
-	var timeExtent = map.timeExtent
+	var timeExtent = map.timeExtent;
 	var endDate = timeExtent.endTime;
 	
 	//We fill in the graph up the latest date within the current time range of the map.
@@ -541,13 +548,13 @@ function esriMapCreateTransectPlot(returnTable)
 	
 	
 	var yField = chart.getYFieldName();
-	var dimField = chart.getDimensionFieldName()
+	var dimField = chart.getDimensionFieldName();
 	
-	var timeExtent = map.timeExtent
+	var timeExtent = map.timeExtent;
 	var endDate = timeExtent.endTime;
 		
 	//Creating a transect plot of the values closest to the end date of our time range.
-	var transectPlot = []
+	var transectPlot = [];
 	for(var index =0; index < returnTable.length; index++)
 	{
 		var trasectFeat = transectFeatures[index];

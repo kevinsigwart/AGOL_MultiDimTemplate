@@ -76,10 +76,10 @@ function onAppData (result) {
 		config = utils.applyOptions(config, result.itemData.values);
 		//Apply any UI changes
 		
-		console.log(result.itemData.values)
+		console.log(result.itemData.values);
 		
 		
-		setUpMap()
+		setUpMap();
 }
 
 function setUpMap() {
@@ -133,6 +133,21 @@ function resetLayout(){
 	
 }
 
+function removeSelections()
+{
+	if(esriMapOb != null){
+		esriMapOb.removeSelections();
+	}
+}
+
+function clearGraphics()
+{
+	if(esriMapOb != null){
+		esriMapOb.clearGraphics();
+	}
+
+}
+
 var utils = {
 	applyOptions : function(configVariable, newConfig) {
 		var q;
@@ -148,10 +163,10 @@ var utils = {
 		dojo.connect(dijit.byId('map'), 'resize', map, map.resize);
 	},
 	onError : function(error) {
-		console.log('Error occured')
+		console.log('Error occured');
 		console.log(error);
 	}
-}	
+};	
 
 
 	function addGraphic(geometry) {
