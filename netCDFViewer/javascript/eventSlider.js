@@ -40,6 +40,10 @@ function eventSliderGetDateTime()
 	return currentDateTime;
 }
 
+/**
+ *In order to get the unique time slices we need to query the underlining data through a GP Service.  
+ * This will be fixed once we use a Mosaic Dataset and Image Services. 
+ */
 function queryForTimeSlices(){
 	
 	var gpService = "http://arcgis-esrifederalsciences-1681685868.us-east-1.elb.amazonaws.com/arcgis/rest/services/201307_GLDAS_Multidimensional/SoilMoistureToTable/GPServer/Make%20NetCDF%20Table%20from%20Point";
@@ -62,7 +66,9 @@ function queryForTimeSlices(){
     gp.execute(params, getTimeSlices);
 }
 
-
+/**
+ *Gets the unique time slices 
+ */
 function getTimeSlices(results, messages) {
 
 	resultTables = [results[0].value];
@@ -184,6 +190,9 @@ function eventSliderMouseClick(d,i)
 	document.dispatchEvent(updateEventSliderTimeEvent);
 }
 
+/**
+ *Move the event slider one spot forward to the next event 
+ */
 function eventSliderMoveForward()
 {
 	selectedGraphIndex++;
@@ -193,6 +202,9 @@ function eventSliderMoveForward()
 	document.dispatchEvent(updateEventSliderTimeEvent);
 }
 
+/**
+ *Move the event slider one spot backwards to the previous event 
+ */
 function eventSliderMoveBackword()
 {
 	selectedGraphIndex--;
@@ -202,6 +214,9 @@ function eventSliderMoveBackword()
 	document.dispatchEvent(updateEventSliderTimeEvent);	
 }
 
+/**
+ * Checking if we are currently on the last event
+ */
 function isLastStep()
 {
 	var lastStep = false;
@@ -214,7 +229,9 @@ function isLastStep()
 		
 	return lastStep;
 }
-
+/**
+ *Check if we are on the first event 
+ */
 function isFirstStep()
 {
 	var firstStep = false;
@@ -222,7 +239,9 @@ function isFirstStep()
 		firstStep = true;
 	return firstStep;
 }
-
+/**
+ *Gets the total number of events 
+ */
 function getStepsCount()
 {
 	var length = 0;

@@ -1,10 +1,7 @@
 dojo.require("esri.map");
 dojo.require('esri.dijit.Attribution');
 dojo.require("esri.arcgis.utils");
-dojo.require("esri.dijit.Legend");
-dojo.require("esri.dijit.TimeSlider");
 dojo.require("esri.dijit.Scalebar");
-dojo.require("esri.IdentityManager");
 dojo.require("esri.dijit.BasemapGallery");
 dojo.require("esri.geometry");
 dojo.require("esri.geometry.Point");
@@ -16,8 +13,6 @@ dojo.require("dojo/json");
   var timeSlider;
   var timeProperties = null;
   var i18n;
-  var returnTable = null;
-  var transectFeatures = null;
   var mode = "PointMode";
   var chart = null;
   var esriMapOb = null;
@@ -127,27 +122,13 @@ function setUpMap() {
 function resetLayout(){
 	if(esriMapOb != null){
 		//When the application is resized, we want to refresh the graph
-		//esriMapOb.UpdateTime();
 		esriMapOb.UpdateChartSize();
 	}
-	
 }
 
-function removeSelections()
-{
-	if(esriMapOb != null){
-		esriMapOb.removeSelections();
-	}
-}
-
-function clearGraphics()
-{
-	if(esriMapOb != null){
-		esriMapOb.clearGraphics();
-	}
-
-}
-
+/**
+ *Move the Event Slider to the next event. 
+ */
 function animationGoForward()
 {
 	if(eventSliderOb != null)
@@ -155,7 +136,9 @@ function animationGoForward()
 		eventSliderOb.moveSliderForward();
 	}
 }
-
+/**
+ *Move the Event Slider to the previous event. 
+ */
 function animationGoBackward()
 {
 	if(eventSliderOb != null)
@@ -164,27 +147,22 @@ function animationGoBackward()
 	}
 }
 
+/**
+ *Animates through all the events.
+ */
 function animationPlay()
 {
-	
+	//TODO: Need to implement.
 }
 
+/**
+ *When the kisters button is clicked we want to activate the Draw Point tool to allow the user
+ * to draw a point on the map and then plot the values within that point. 
+ */
 function kistersButtonClicked()
 {
 	mode = "kistersMode";
 	tb.activate(esri.toolbars.Draw.POINT);
-}
-
-function drawPointButtonClicked()
-{
-	mode = "esriPointMode";
-	tb.activate(esri.toolbars.Draw.POINT);
-}
-
-function drawLineButtonClicked()
-{
-	mode = "esriTransectMode";
-	tb.activate(esri.toolbars.Draw.POLYLINE);
 }
 
 var utils = {
@@ -208,30 +186,6 @@ var utils = {
 };	
 
 
-	function addGraphic(geometry) {
-		
-		tb.deactivate();
-		
-		if(esriMapOb == null)
-			esriMapOb = new esriMap(map,config.GPTaskService);
-
-          if (mode == "esriPointMode") {
-          	
-          	esriMapOb.addPointToMap(geometry,mode);
-
-          }
-          else if (mode == "esriTransectMode") {
-
-          	esriMapOb.addTransectToMap(geometry);
-          	
-          }   
-          else if(mode == "kistersMode")     
-          {
-          	esriMapOb.addPointToMap(geometry,mode);
-          }
-	  }
-
-
    function initUI(layers) {
    			
    	tb = new esri.toolbars.Draw(map);
@@ -245,20 +199,6 @@ var utils = {
       scalebarUnit: i18n.viewer.main.scaleBarUnits //metric or english
     }); 
     
-    /*
-    //create the legend - exclude basemaps and any note layers
-    var layerInfo = buildLayersList(layers);  
-    if(layerInfo.length > 0){
-      var legendDijit = new esri.dijit.Legend({
-        map:map,
-        layerInfos:layerInfo
-      },"legendDiv");
-      legendDijit.startup();
-    }
-    else{
-      dojo.byId('legendDiv').innerHTML = i18n.tools.legend.layerMessage;
-    } */
-    
     
     if(esriMapOb == null)
 		esriMapOb = new esriMap(map,config.GPTaskService);
@@ -269,7 +209,7 @@ var utils = {
     	eventSliderOb = new EventSlider();
     	document.addEventListener("EventSliderDateChanged",updateMapTime,false);
     }
-    
+   
     //add the basemap gallery, in this case we'll display maps from ArcGIS.com including bing maps
     var basemapGallery = new esri.dijit.BasemapGallery({
       showArcGISBasemaps: true,
@@ -280,105 +220,34 @@ var utils = {
     basemapGallery.on("error", function(msg) {
       console.log("basemap gallery error:  ", msg);
     });
-
-    
-    
-    /*
-    if(timeProperties){
-
-      var startTime = timeProperties.startTime;
-      var endTime = timeProperties.endTime;
-      var fullTimeExtent = new esri.TimeExtent(new Date(startTime), new Date(endTime));
-
-      map.setTimeExtent(fullTimeExtent);
-      //create the slider
-      timeSlider = new esri.dijit.TimeSlider({
-        style: "width: 100%;"
-      }, dojo.byId("timeSliderDiv"));
-      
-      timeSlider.loop = config.loop;
-      
-      map.setTimeSlider(timeSlider);
-      //Set time slider properties 
-      timeSlider.setThumbCount(timeProperties.thumbCount);
-      //timeSlider.setThumbCount(1);
-      timeSlider.setThumbMovingRate(timeProperties.thumbMovingRate);
-      //define the number of stops
-      if(timeProperties.numberOfStops){
-        timeSlider.createTimeStopsByCount(fullTimeExtent,timeProperties.numberOfStops);
-      }else{
-        timeSlider.createTimeStopsByTimeInterval(fullTimeExtent,timeProperties.timeStopInterval.interval,timeProperties.timeStopInterval.units);
-      }
-      //set the thumb index values if the count = 2
-      if(timeSlider.thumbCount ==2){
-        timeSlider.setThumbIndexes([0,1]);
-      }
-
-
-      dojo.connect(timeSlider,'onTimeExtentChange',function(timeExtent){
-        //update the time details span.
-        var timeString; 
-        if(timeProperties.timeStopInterval !== undefined){
-        switch(timeProperties.timeStopInterval.units){   
-        case 'esriTimeUnitsCenturies':	
-          datePattern = 'yyyy G';
-          break;          
-        case 'esriTimeUnitsDecades':
-          datePattern = 'yyyy';
-          break;  
-         case 'esriTimeUnitsYears':
-          datePattern = 'MMMM yyyy';
-          break;
-        case 'esriTimeUnitsWeeks':	 
-          datePattern = 'MMMM d, yyyy';
-          break;
-        case 'esriTimeUnitsDays':
-          datePattern = 'MMMM d, yyyy';
-          break;        
-        case 'esriTimeUnitsHours':
-          datePattern = 'h:m:s.SSS a';
-          break;
-        case 'esriTimeUnitsMilliseconds':
-          datePattern = 'h:m:s.SSS a';
-          break;          
-        case 'esriTimeUnitsMinutes':
-          datePattern = 'h:m:s.SSS a';
-          break;          
-        case 'esriTimeUnitsMonths':
-          datePattern = 'MMMM, y';
-          break;          
-        case 'esriTimeUnitsSeconds':
-          datePattern = 'h:m:s.SSS a';
-          break;          
-      }
-       var startTime=formatDate(timeExtent.startTime,datePattern);
-       var endTime = formatDate(timeExtent.endTime,datePattern);
-       //timeString= esri.substitute({"start_time": startTime, "end_time": endTime}, i18n.tools.time.timeRange);
-       
-       //Show one month
-       timeString = esri.substitute({"time":formatDate(timeExtent.endTime,datePattern)},i18n.tools.time.timeRangeSingle);
-      }
-      else{
-       timeString = esri.substitute({"time":formatDate(timeExtent.endTime,datePattern)},i18n.tools.time.timeRangeSingle);
-
-      }
-
-        dojo.byId('timeSliderLabel').innerHTML =  timeString;
-        if(esriMapOb != null)
-        {
-        	esriMapOb.UpdateTime();
-        }
-                
-      });
-
-      timeSlider.startup();
-
-   }*/
   }
   
+  	/**
+  	 *The event handler for when a graphic is drawn on the map using the Draw Graphics Tool 
+  	 * (In this case the kisters draw point tool).  We want to add a point to the map and deactivate
+  	 * the Draw Point button.  Only one point can be drawn at a time.  The user needs to reclick the
+  	 * tool button to draw another point. 
+  	 */
+	function addGraphic(geometry) {
+		
+		tb.deactivate();
+		
+		if(esriMapOb == null)
+			esriMapOb = new esriMap(map,config.GPTaskService);
+	
+		esriMapOb.addPointToMap(geometry,mode);
+	
+	}  
+	  
+  /***
+   * Event Handler Listener function for when the Event Sliders Date Changes. 
+   * We want to update our Animation Widgets Date to be the same as the Event Slider
+   * Also Enable/Disable the Animation buttons depending on where we are at within the
+   * Event Slider.  For example disable the Forward button when we are at the last event
+   * within the map.
+   */
   function updateMapTime()
   {
-  	
   	 if(eventSliderOb != null)
   	 {
   	 	dateTime = eventSliderOb.getDateTime();
@@ -395,60 +264,4 @@ var utils = {
   	 	else
   	 		animBackwordBtn.disabled = false;
   	 }
-  }
-  
-  function formatDate(date,datePattern){
-    return dojo.date.locale.format(date, {
-        selector: 'date',
-        datePattern: datePattern
-      });
-  }
-  
-  function buildLayersList(layers){
-
- //layers  arg is  response.itemInfo.itemData.operationalLayers;
-  var layerInfos = [];
-  dojo.forEach(layers, function (mapLayer, index) {
-      var layerInfo = {};
-      if (mapLayer.featureCollection && mapLayer.type !== "CSV") {
-        if (mapLayer.featureCollection.showLegend === true) {
-            dojo.forEach(mapLayer.featureCollection.layers, function (fcMapLayer) {
-              if (fcMapLayer.showLegend !== false) {
-                  layerInfo = {
-                      "layer": fcMapLayer.layerObject,
-                      "title": mapLayer.title,
-                      "defaultSymbol": false
-                  };
-                  if (mapLayer.featureCollection.layers.length > 1) {
-                      layerInfo.title += " - " + fcMapLayer.layerDefinition.name;
-                  }
-                  layerInfos.push(layerInfo);
-              }
-            });
-          }
-      } else if (mapLayer.showLegend !== false && mapLayer.layerObject) {
-      var showDefaultSymbol = false;
-      if (mapLayer.layerObject.version < 10.1 && (mapLayer.layerObject instanceof esri.layers.ArcGISDynamicMapServiceLayer || mapLayer.layerObject instanceof esri.layers.ArcGISTiledMapServiceLayer)) {
-        showDefaultSymbol = true;
-      }
-      layerInfo = {
-        "layer": mapLayer.layerObject,
-        "title": mapLayer.title,
-        "defaultSymbol": showDefaultSymbol
-      };
-        //does it have layers too? If so check to see if showLegend is false
-        if (mapLayer.layers) {
-            var hideLayers = dojo.map(dojo.filter(mapLayer.layers, function (lyr) {
-                return (lyr.showLegend === false);
-            }), function (lyr) {
-                return lyr.id;
-            });
-            if (hideLayers.length) {
-                layerInfo.hideLayers = hideLayers;
-            }
-        }
-        layerInfos.push(layerInfo);
-    }
-  });
-  return layerInfos;
   }
