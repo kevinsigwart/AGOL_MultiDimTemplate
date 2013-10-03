@@ -7,9 +7,6 @@ var gpTask = "";
 var geomService = "";
 var resultTables = [];
 var chart = null;
-var inputParamaterName = "";
-
-var colorArray = ["#2f7ed8", "#0d233a", "#8bbc21", "#910000", "#1aadce", "#492970", "#f28f43", "#77a1e5", "#c42525", "#a6c96a"];
 
 
 function esriMap(esrimap,gpTaskString){
@@ -24,7 +21,7 @@ function esriMap(esrimap,gpTaskString){
 	chart = new D3Charting();
 	
 	//Get row dimension and value variables from Output Parameters
-	//getParameterValues(gpTask);
+	getParameterValues(gpTask);
 	
 	//Event for when the chart is updated
 	document.addEventListener("ChartPointSelected",graphSelectIndexChanged,false);
@@ -39,8 +36,6 @@ function esriMap(esrimap,gpTaskString){
 	this.addPointToMap = esriMapAddPointToMap;
 	this.addTransectToMap = esriMapAddTransectToMap;
 	this.UpdateTime = esriMapTimeExtentChange;	
-	this.UpdateChartSize = esriMapLayoutSizeChange;	
-	this.UpdateMapTime = esriMapUpdateTimeExtent;
 }
 
 /**********Gp Service Functions******************************************/
@@ -49,14 +44,13 @@ function esriMap(esrimap,gpTaskString){
  * know what the x Variable and y Variable to graph are. 
  */
 function getParameterValues(gpTask){
-
+		//	return;
 	//var url = gpTask + "?f=json";
 	var dataUrl = gpTask + "?f=json";
 	
 	
 	//var targetNode = dojo.byId("licenseContainer");
 	// The parameters to pass to xhrGet, the url, how to handle it, and the callbacks.
-	//TODO:Switch to using DOJO Request/Promise
 	var xhrArgs = {
 		url : dataUrl,
 		//handleAs : "json",
@@ -64,8 +58,6 @@ function getParameterValues(gpTask){
 		load : function(data) {
 
 			var gotFieldValues = false;
-			
-			//TODO:  Check if this is asynchronous
 			
 			dojo.forEach(data.parameters, function(parameter){
 				if(parameter.direction == "esriGPParameterDirectionOutput" && parameter.dataType == "GPRecordSet")
@@ -77,10 +69,6 @@ function getParameterValues(gpTask){
 					chart.setYFieldName(valueFieldValue);
 					gotFieldValues = true;
 				}
-				else if(parameter.direction == "esriGPParameterDirectionInput" && parameter.dataType == "GPFeatureRecordSetLayer")
-				{
-					inputParamaterName = parameter.name;
-				}
 			});
 			
 			if(!gotFieldValues)
@@ -89,7 +77,7 @@ function getParameterValues(gpTask){
 		error : function(error) {
 			alert("Invalid Input GP Service.\nPlease check your GP Service Configured Variable");
 		}
-	};
+	}
 
 	esri.request(xhrArgs);	
 }
@@ -128,20 +116,12 @@ function esriMapTimeExtentChange()
 	esriMapUpdateChartTime(index);
 }
 
-function esriMapLayoutSizeChange()
-{
-	if(chart.getChartingMode() == "kisters")
-		chart.updateKistersGraphSize();
-	else
-		esriMapTimeExtentChange();
-}
-
 /**
  *Updates the charts based on the current map time extent 
  */
 function esriMapUpdateChartTime(index)
 { 	
-	var timeExtent = map.timeExtent;
+	var timeExtent = map.timeExtent
 	var endDate = timeExtent.endTime;
 	
 	var mode = chart.getChartingMode();	
@@ -289,92 +269,40 @@ function esriMapRemoveSelections() {
 
 	chart.setSelectedGraphIndex(-1);
 	esriMapsClearMapGraphicSelections();
-	chart.clearSelection();
 	
-	//When the user removes the selection, we want to graph to go back to transect mode,
-	//because no points are selected.
-	if(chart.getChartingMode() == "TransectPointMode")
-	{
-		chart.setChartingMode("TransectLineMode");	
-		graphUpdateChart();
-	}
+	chart.clearSelection();
 }
 
 /*****  Time Series Point Plot *******************************************************/
 /*
  * Plots the points values over time
  */
-function esriMapAddPointToMap(geometry,mode)
+function esriMapAddPointToMap(geometry)
 {
-
-	    
-	if(mode != "kistersMode")
-	{
-		var symbol = new esri.symbol.SimpleMarkerSymbol();	    
-	    symbol.setSize(12);
-	    symbol.setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([0,0,0]), 1));
-	    //symbol.setColor(new dojo.Color([255,0,0,0.75]));
-	    symbol.setColor(new dojo.Color([0,255,255,0.75]));
-	    
-	    var graphic = new esri.Graphic(geometry,symbol);
-	    
-	    map.graphics.clear();
-	    
-	    map.graphics.add(graphic);
-	    
-	    //We need to remove the kisters chart
-	    if(chart.getChartingMode() == "kisters")
-	    	chart.remove();
-	    
-		chart.setChartingMode("PointMode");
-	        	    
-	    var gp = new esri.tasks.Geoprocessor(gpTask);
-	    
-	    //We reproject the points into WGS84 for the service.
-	    var features= [];
-	    var repoGeom = esri.geometry.webMercatorToGeographic(geometry);
-	    var repoGraphic = new esri.Graphic(repoGeom,symbol);
-	    features.push(repoGraphic);
-	    var featureSet = new esri.tasks.FeatureSet();
-	    featureSet.features = features;
-	    
-	    var params = []; //{ inputParamaterName:featureSet };
-	    params[inputParamaterName] = featureSet;
-	    
-	    gp.execute(params, esriMapGetTable);
-   }
-   else
-   {
-   		//We need to remove the point chart or transect chart if already created.
-   		chart.remove();
-	 	
-	 	var markerSymbolIndex = map.graphics.graphics.length - 1;
-	 	
-	 	var symbol = new esri.symbol.SimpleMarkerSymbol();	    
-	    symbol.setSize(12);
-	    symbol.setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([0,0,0]), 1));
-	    symbol.setColor(new dojo.Color(colorArray[markerSymbolIndex]));
-	    
-	    
-	    if(map.graphics.graphics.length > 10)
-	    {
-		    //symbol.setColor(new dojo.Color([255,0,0,0.75]));
-		    symbol.setColor(new dojo.Color([0,255,255,0.75]));
-		}
-		/*
-		else if(map.graphics.graphics.length == 2)
-	    	symbol.setColor(new dojo.Color([0,0,0,0.75]));
-	    else if(map.graphics.graphics.length == 3)
-	    	symbol.setColor(new dojo.Color([0,255,0,0.75]));
-	    else
-	    	symbol.setColor(new dojo.Color([255,0,0,0.75])); */
-	    	
-	    var graphic = new esri.Graphic(geometry,symbol);
-	    	    
-	    map.graphics.add(graphic);  
-	    		
-   		chart.addPointKisters(geometry);
-   }
+	chart.setChartingMode("PointMode");
+  	var symbol = new esri.symbol.SimpleMarkerSymbol();	    
+    symbol.setSize(12);
+    symbol.setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([0,0,0]), 1));
+    symbol.setColor(new dojo.Color([255,0,0,0.75]));
+    
+    var graphic = new esri.Graphic(geometry,symbol);
+    
+    map.graphics.clear();
+    
+    map.graphics.add(graphic);
+        	    
+    var gp = new esri.tasks.Geoprocessor(gpTask);
+    
+    //We reproject the points into WGS84 for the service.
+    var features= [];
+    var repoGeom = esri.geometry.webMercatorToGeographic(geometry);
+    var repoGraphic = new esri.Graphic(repoGeom,symbol);
+    features.push(repoGraphic);
+    var featureSet = new esri.tasks.FeatureSet();
+    featureSet.features = features;
+    
+    var params = { "InputPnt":featureSet };
+    gp.execute(params, esriMapGetTable);
 }
 
 /**
@@ -384,7 +312,7 @@ function esriMapGetTable(results, messages) {
 			
 	var seriesValues = [];
 	var seriesValuesSub = [];
-	var timeExtent = map.timeExtent;
+	var timeExtent = map.timeExtent
 	var endDate = timeExtent.endTime;
 	
 	resultTables = [results[0].value];
@@ -398,7 +326,7 @@ function esriMapGetTable(results, messages) {
 function esriMapCreateChart(table)
 {		
 	chart.remove();
-		    					
+	    					
 	//We fill in the graph up the latest date within the current time range of the map.
 	//This lets the user see what the current value is.
 	var fillArea = esriMapGetTimeSubsetAreaPlot(table);
@@ -411,7 +339,7 @@ function esriMapCreateChart(table)
  */
 function esriMapGetTimeSubsetAreaPlot(table)
 {
-	var timeExtent = map.timeExtent;
+	var timeExtent = map.timeExtent
 	var endDate = timeExtent.endTime;
 	
 	//We fill in the graph up the latest date within the current time range of the map.
@@ -438,12 +366,7 @@ function esriMapGetTimeSubsetAreaPlot(table)
  */
 function esriMapAddTransectToMap(geometry)
 {
-	//We need to remove the kisters chart
-    if(chart.getChartingMode() == "kisters")
-    	chart.remove();
-    	
-	chart.setChartingMode("TransectLineMode");		
-	
+	chart.setChartingMode("TransectLineMode");
 	var symbol = new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([255, 0, 0]), 3);
 	var graphic = new esri.Graphic(geometry, symbol);
 	map.graphics.clear();
@@ -453,7 +376,7 @@ function esriMapAddTransectToMap(geometry)
 	markerSymbol.setSize(12);
 	markerSymbol.setOutline(new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([0, 0, 0]), 1));
 	markerSymbol.setColor(new dojo.Color([255, 0, 0, 0.75]));
-	
+
 	var polyline = geometry;
 	var path = polyline.paths[0];
 
@@ -463,7 +386,6 @@ function esriMapAddTransectToMap(geometry)
 
 	var subsetPolylines = [];
 
-	
 	//To plot the points on the map we need each pnt within the transect, to pass up to the GP Service
 	for ( index = 0; index < path.length; index++) {
 		var pnt = path[index];
@@ -479,15 +401,12 @@ function esriMapAddTransectToMap(geometry)
 			subsetPolylines.push(subsetPolyline);
 		}
 
-	    var pt = new esri.geometry.Point(pnt[0],pnt[1],map.spatialReference);
-	    
 		var attributes = new Array();
 		attributes.OBJECTID = index;
-		//var infoTemplate = new InfoTemplate("Vernal Pool Locations","Latitude: ${Ycoord} <br/> Longitude: ${Xcoord} <br/>");
-		    
-		var pntGraphic = new esri.Graphic(pt, markerSymbol,attributes,null);
-		//pntGraphic.attributes = attributes;
-		map.graphics.add(pntGraphic); 
+
+		var pntGraphic = new esri.Graphic(pntGeom, markerSymbol);
+		pntGraphic.attributes = attributes;
+		map.graphics.add(pntGraphic);
 
 		var repoGeom = esri.geometry.webMercatorToGeographic(pntGeom);
 		var repoGraphic = new esri.Graphic(repoGeom, symbol);
@@ -556,8 +475,10 @@ function esriMapsGetTransectValues()
 			var featureSet = new esri.tasks.FeatureSet();
 			featureSet.features = inputfeatures;
 	
-			var params = [];
-			params[inputParamaterName] = featureSet;
+			var params = {
+				"InputPnt" : featureSet
+			};
+			
 			var thisRequest = gp.execute(params);
 			
 			allGPTasks.push(thisRequest);		
@@ -597,21 +518,6 @@ function esriMapGetTransectResults(results) {
 	}
 } 
 
-function esriMapUpdateTimeExtent(dateTime)
-{
-	var timeExtent = new esri.TimeExtent();
-	timeExtent.startTime = dateTime;
-	map.setTimeExtent(timeExtent); 
-	
-	var chartTimeExtent = new esri.TimeExtent();
-	var endate = new Date(dateTime);
-	endate.setMonth(endate.getMonth() + 1);
-	chartTimeExtent.startTime = dateTime;
-	chartTimeExtent.endTime = endate;
-	if(chart != null) 	
-		chart.updateKistersTimeGraphic(chartTimeExtent);
-}
-
 
 /**
  *Plot the transect using the results from the GP Service 
@@ -619,20 +525,20 @@ function esriMapUpdateTimeExtent(dateTime)
  */  
 function esriMapCreateTransectPlot(returnTable)
 {
-	
 	if(chart == null)
 		chart = new D3Charting();
 	
 	chart.remove();
 	
-	var yField = chart.getYFieldName();
-	var dimField = chart.getDimensionFieldName();
 	
-	var timeExtent = map.timeExtent;
+	var yField = chart.getYFieldName();
+	var dimField = chart.getDimensionFieldName()
+	
+	var timeExtent = map.timeExtent
 	var endDate = timeExtent.endTime;
 		
 	//Creating a transect plot of the values closest to the end date of our time range.
-	var transectPlot = [];
+	var transectPlot = []
 	for(var index =0; index < returnTable.length; index++)
 	{
 		var trasectFeat = transectFeatures[index];

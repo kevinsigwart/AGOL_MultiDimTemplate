@@ -5,9 +5,7 @@ dojo.require("esri.dijit.Legend");
 dojo.require("esri.dijit.TimeSlider");
 dojo.require("esri.dijit.Scalebar");
 dojo.require("esri.IdentityManager");
-dojo.require("esri.dijit.BasemapGallery");
 dojo.require("esri.geometry");
-dojo.require("esri.geometry.Point");
 dojo.require("esri.tasks.geometry");
 dojo.require("dojo/json");
 
@@ -21,15 +19,19 @@ dojo.require("dojo/json");
   var mode = "PointMode";
   var chart = null;
   var esriMapOb = null;
-  var kistersWidget = null;
-  var eventSliderOb = null;
+  
   
    function initMap() {
    	
-   	
+   	console.log(configOptions);
      //get the localization strings
   	 i18n = dojo.i18n.getLocalization("esriTemplate","template"); 
-             
+       
+      
+      //read the legend header text from the localized strings file 
+      dojo.byId('legendHeader').innerHTML = i18n.tools.legend.label;
+
+      
       if(configOptions.geometryserviceurl && location.protocol === "https:"){
         configOptions.geometryserviceurl = configOptions.geometryserviceurl.replace('http:','https:');
       }
@@ -42,7 +44,7 @@ dojo.require("dojo/json");
       esri.arcgis.utils.arcgisUrl = configOptions.sharingurl;
        
       if(!configOptions.proxyurl){   
-        configOptions.proxyurl = location.protocol + '//' + location.host + "/sharing/proxy.ashx";
+        configOptions.proxyurl = location.protocol + '//' + location.host + "/sharing/proxy";
       }
 
       esri.config.defaults.io.proxyUrl =  configOptions.proxyurl;
@@ -53,8 +55,8 @@ dojo.require("dojo/json");
 	urlObject = esri.urlToObject(document.location.href);
 	urlObject.query = urlObject.query || {};
 	config = utils.applyOptions(config, urlObject.query);
-
-	if(urlObject.query.appid)
+	var appid = (!!configOptions.appid)?configOptions.appid:urlObject.query.appid
+	if(appid)
 	{		
 		appRequest = esri.arcgis.utils.getItem(config.appid);
 
@@ -64,8 +66,9 @@ dojo.require("dojo/json");
 	else
 	{
 		setUpMap();
-	}       
-	
+	}
+     
+        
 }
     
 function onAppData (result) {
@@ -75,10 +78,10 @@ function onAppData (result) {
 		config = utils.applyOptions(config, result.itemData.values);
 		//Apply any UI changes
 		
-		console.log(result.itemData.values);
+		console.log(result.itemData.values)
 		
 		
-		setUpMap();
+		setUpMap()
 }
 
 function setUpMap() {
@@ -109,6 +112,7 @@ function setUpMap() {
 		}
 		if (map.loaded) {
 			initUI(layers);
+				initTsWidget();  
 		} else {
 			dojo.connect(map, "onLoad", function() {
 				initUI(layers);
@@ -121,70 +125,6 @@ function setUpMap() {
 	mapDeferred.addErrback(function(error) {
 		alert(i18n.viewer.errors.createMap + " : " + error.message);
 	});
-	     
-}
-
-function resetLayout(){
-	if(esriMapOb != null){
-		//When the application is resized, we want to refresh the graph
-		//esriMapOb.UpdateTime();
-		esriMapOb.UpdateChartSize();
-	}
-	
-}
-
-function removeSelections()
-{
-	if(esriMapOb != null){
-		esriMapOb.removeSelections();
-	}
-}
-
-function clearGraphics()
-{
-	if(esriMapOb != null){
-		esriMapOb.clearGraphics();
-	}
-
-}
-
-function animationGoForward()
-{
-	if(eventSliderOb != null)
-	{
-		eventSliderOb.moveSliderForward();
-	}
-}
-
-function animationGoBackward()
-{
-	if(eventSliderOb != null)
-	{
-		eventSliderOb.moveSliderForward();
-	}
-}
-
-function animationPlay()
-{
-	
-}
-
-function kistersButtonClicked()
-{
-	mode = "kistersMode";
-	tb.activate(esri.toolbars.Draw.POINT);
-}
-
-function drawPointButtonClicked()
-{
-	mode = "esriPointMode";
-	tb.activate(esri.toolbars.Draw.POINT);
-}
-
-function drawLineButtonClicked()
-{
-	mode = "esriTransectMode";
-	tb.activate(esri.toolbars.Draw.POLYLINE);
 }
 
 var utils = {
@@ -202,10 +142,10 @@ var utils = {
 		dojo.connect(dijit.byId('map'), 'resize', map, map.resize);
 	},
 	onError : function(error) {
-		console.log('Error occured');
+		console.log('Error occured')
 		console.log(error);
 	}
-};	
+}	
 
 
 	function addGraphic(geometry) {
@@ -215,28 +155,88 @@ var utils = {
 		if(esriMapOb == null)
 			esriMapOb = new esriMap(map,config.GPTaskService);
 
-          if (mode == "esriPointMode") {
-          	
-          	esriMapOb.addPointToMap(geometry,mode);
-
+		  var type = geometry.type;
+          if (type === "point" || type === "multipoint") {
+          	mode = "PointMode";
+          	esriMapOb.addPointToMap(geometry);
+            //addPointToMap(geometry);
           }
-          else if (mode == "esriTransectMode") {
-
+          else if (type === "line" || type === "polyline") {
+          	mode = "LineMode";
           	esriMapOb.addTransectToMap(geometry);
-          	
-          }   
-          else if(mode == "kistersMode")     
-          {
-          	esriMapOb.addPointToMap(geometry,mode);
-          }
+            //addLineToMap(geometry);
+          }        
 	  }
 
+        
+
+	function clearGraphics() {
+	
+		if (esriMapOb != null)
+			esriMapOb.clearGraphics();
+	
+	}
+	
+	function removeSelections() {
+	
+		if (esriMapOb != null)
+			esriMapOb.removeSelections();
+	
+	}
+	
+	function initTsWidget(){
+		require(["kisters/builds/kiWidgets"],function(){
+
+		require(["kisters/widgets/tsWidget"],function(tsWidget){
+
+			var tsWidgetConf = {
+
+					 floating:true, 
+					 tslist:[],
+					 currentFrom:"2010-01-01T00:00:00Z",
+					 currentTo:"2013-02-01T00:00:00Z",
+					 totalFrom:"2010-01-01T00:00:00Z", 
+					 totalTo:"2013-02-01T00:00:00Z", 
+					 width:"600",
+					 height:"450",
+					 baseUrl:"http://gisweb.kisters.de/dscwidget-servlet/DSCWidgetServlet",
+					customlogo:"http://gisweb.kisters.de/kiWidgets/service/kisters_nasa.png"				 
+			};
+							
+			var tsW = new tsWidget(tsWidgetConf,"tsWidget");			
+			tsW.startup();
+			dojo.style(tsW.root.domNode,"top","100px");
+			dojo.style(tsW.root.domNode,"left","500px");	
+			console.log(map);
+			 dojo.connect(map.timeSlider,'onTimeExtentChange',function(timeExtent){
+				console.log(timeExtent);
+				tsW.setMarker(timeExtent.startTime,timeExtent.endTime);
+			 });
+		
+			dojo.connect(tb, "onDrawEnd", function(geometry){
+				if(geometry.type=="point"){
+					var lat = geometry.getLatitude();
+					var lon = geometry.getLongitude();
+					lat = lat.toFixed(3);
+					lon = lon.toFixed(3);
+					var tslist = [{srcid:"ldas",lat:lat, lon: lon,name: lat+","+lon }];
+					tsW.addTsByLocation(tslist);				
+					}
+			});
+		});		
+	
+	});			
+}
 
    function initUI(layers) {
    			
    	tb = new esri.toolbars.Draw(map);
     dojo.connect(tb, "onDrawEnd", addGraphic);
-        
+  
+	
+
+	
+	  
     //add chrome theme for popup
     dojo.addClass(map.infoWindow.domNode, "chrome");
     //add the scalebar 
@@ -245,7 +245,6 @@ var utils = {
       scalebarUnit: i18n.viewer.main.scaleBarUnits //metric or english
     }); 
     
-    /*
     //create the legend - exclude basemaps and any note layers
     var layerInfo = buildLayersList(layers);  
     if(layerInfo.length > 0){
@@ -257,33 +256,10 @@ var utils = {
     }
     else{
       dojo.byId('legendDiv').innerHTML = i18n.tools.legend.layerMessage;
-    } */
-    
-    
-    if(esriMapOb == null)
-		esriMapOb = new esriMap(map,config.GPTaskService);
-			
-    //check to see if the web map has any time properties
-    if(eventSliderOb == null)
-    {
-    	eventSliderOb = new EventSlider();
-    	document.addEventListener("EventSliderDateChanged",updateMapTime,false);
     }
     
-    //add the basemap gallery, in this case we'll display maps from ArcGIS.com including bing maps
-    var basemapGallery = new esri.dijit.BasemapGallery({
-      showArcGISBasemaps: true,
-      map: map
-    }, "basemapGallery");
-    basemapGallery.startup();
+    //check to see if the web map has any time properties
     
-    basemapGallery.on("error", function(msg) {
-      console.log("basemap gallery error:  ", msg);
-    });
-
-    
-    
-    /*
     if(timeProperties){
 
       var startTime = timeProperties.startTime;
@@ -296,12 +272,9 @@ var utils = {
         style: "width: 100%;"
       }, dojo.byId("timeSliderDiv"));
       
-      timeSlider.loop = config.loop;
-      
       map.setTimeSlider(timeSlider);
       //Set time slider properties 
       timeSlider.setThumbCount(timeProperties.thumbCount);
-      //timeSlider.setThumbCount(1);
       timeSlider.setThumbMovingRate(timeProperties.thumbMovingRate);
       //define the number of stops
       if(timeProperties.numberOfStops){
@@ -317,6 +290,7 @@ var utils = {
 
       dojo.connect(timeSlider,'onTimeExtentChange',function(timeExtent){
         //update the time details span.
+		
         var timeString; 
         if(timeProperties.timeStopInterval !== undefined){
         switch(timeProperties.timeStopInterval.units){   
@@ -345,7 +319,7 @@ var utils = {
           datePattern = 'h:m:s.SSS a';
           break;          
         case 'esriTimeUnitsMonths':
-          datePattern = 'MMMM, y';
+          datePattern = 'MMMM d, y';
           break;          
         case 'esriTimeUnitsSeconds':
           datePattern = 'h:m:s.SSS a';
@@ -353,10 +327,8 @@ var utils = {
       }
        var startTime=formatDate(timeExtent.startTime,datePattern);
        var endTime = formatDate(timeExtent.endTime,datePattern);
-       //timeString= esri.substitute({"start_time": startTime, "end_time": endTime}, i18n.tools.time.timeRange);
+       timeString= esri.substitute({"start_time": startTime, "end_time": endTime}, i18n.tools.time.timeRange);
        
-       //Show one month
-       timeString = esri.substitute({"time":formatDate(timeExtent.endTime,datePattern)},i18n.tools.time.timeRangeSingle);
       }
       else{
        timeString = esri.substitute({"time":formatDate(timeExtent.endTime,datePattern)},i18n.tools.time.timeRangeSingle);
@@ -373,30 +345,8 @@ var utils = {
 
       timeSlider.startup();
 
-   }*/
+   }
   }
-  
-  function updateMapTime()
-  {
-  	
-  	 if(eventSliderOb != null)
-  	 {
-  	 	dateTime = eventSliderOb.getDateTime();
-  	 	animationDateTimeLabel.textContent = dateTime.toDateString(); 
-  	 	esriMapOb.UpdateMapTime(dateTime);		
-  	 	
-  	 	if(eventSliderOb.isSlidersLastSpot()) 
-  	 		animForwardBtn.disabled = true;
-  	 	else
-  	 		animForwardBtn.disabled = false;
-  	 		
-  	 	if(eventSliderOb.isSlidersFirstSpot())
-  	 		animBackwordBtn.disabled = true;
-  	 	else
-  	 		animBackwordBtn.disabled = false;
-  	 }
-  }
-  
   function formatDate(date,datePattern){
     return dojo.date.locale.format(date, {
         selector: 'date',

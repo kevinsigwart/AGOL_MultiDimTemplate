@@ -1,6 +1,3 @@
-//dojo.require("kisters/builds/kiWidgets");
-//dojo.require("kisters/widgets/tsWidget");
-
 //Global Variables.  These are needed in the events so the have to be global
 var yValueField = "";
 var dimension = "";
@@ -9,7 +6,6 @@ var chartingMode = "";
 var selectedGraphIndex = -1;
 var chartPointSelectedEvent;
 var updateChartEvent;
-var kistersWidget;
 
 function D3Charting() {
 
@@ -24,11 +20,10 @@ function D3Charting() {
 	//Only using this when a plot point has been double clicked
 	updateChartEvent.initEvent("UpdateChart",true,true);
 	
-	kistersInitWidget();
 		
 	//Methods  
 	this.createTimeSeriesChart = d3CreateTimeSeriesChart;
-	this.remove = chartingRemoveChart;
+	this.remove = d3RemoveChart;
 	this.createTransectPlot = d3CreateTransectPlot;
 	this.setYFieldName = d3SetyFieldName;
 	this.getYFieldName = d3GetyFieldName;
@@ -40,11 +35,7 @@ function D3Charting() {
 	this.setSelectedGraphIndex = d3SetSelectedGraphIndex;
 	this.selectGraphPoint = d3HighlighGraphPntFromIndex;
 	this.clearSelection = d3ClearSelection;
-	this.addPointKisters = kistersAddPoint;
-	this.updateKistersGraphSize = kistersUpdateGraphSize;
-	this.updateKistersTimeGraphic = kistersUpdateTimeGraphic;
 }
-
 
 /****** Get/Set Properties *******************************/
 function d3GetyFieldName()
@@ -101,13 +92,6 @@ function d3SetSelectedGraphIndex(index)
 	selectedGraphIndex = index;
 }
 
-function chartingRemoveChart()
-{
-	if(chartingMode != "kisters")
-		d3RemoveChart();
-	else
-		kistersDeleteGraph();
-}
 
 
 /**
@@ -131,16 +115,9 @@ function d3CreateTimeSeriesChart(features, fillArea)
 	var valueField = yValueField;
 	var timeField = dimension;
 	
-	//timeSliderWidth = document.getElementById('timeSliderDiv').offsetWidth;
-	timeSliderWidth = 500;
-	
-	var margin = {top: 10, right: 80, bottom: 20, left: 50}, //var margin = {top: 10, right: 1, bottom: 30, left: 50},
-	width = timeSliderWidth - 90 - margin.left - margin.right, //880 - margin.left - margin.right, //225 - margin.left - margin.right,
-	height = 185 - margin.top - margin.bottom; //300 - margin.top - margin.bottom;
-	
-	
-	
-	
+	var margin = {top: 10, right: 1, bottom: 30, left: 50},
+	width = 240 - margin.left - margin.right,
+	height = 315 - margin.top - margin.bottom;
 	
 	//Adding the plot framwork to the application
 	var svg = addPlot(margin, width, height);
@@ -180,7 +157,7 @@ function d3CreateTimeSeriesChart(features, fillArea)
 
 	svg.append("path").datum(features).attr("class", "line").attr("d", line);
 
-	//svg.append("path").datum(fillArea).attr("class", "area").attr("d", area);
+	svg.append("path").datum(fillArea).attr("class", "area").attr("d", area);
 
 	svg.selectAll(".invDot").data(features).enter().append("circle").attr("class", "invDot").attr("r", 1.5).attr("cx", function(d) {
 		return x(d.attributes[timeField]);
@@ -189,13 +166,6 @@ function d3CreateTimeSeriesChart(features, fillArea)
 	}).append("svg:title").text(function(d) {
 		return valueField + ": " + d.attributes[valueField] + "\n" + timeField + ": " + (new Date(d.attributes[timeField])).toDateString();
 	}); 
-	
-  	//We want to highlight the current view of the map
-  	var circles = svg.selectAll(".invDot");
-	var pnt = circles[0][fillArea.length - 1];
-	pnt.style.fill = "cyan";
-	pnt.style.stroke = "black";	
-	pnt.setAttribute('r',6);	
 
 }
 
@@ -207,22 +177,9 @@ function d3CreateTransectPlot(transectPlot)
 {	
 	var valueField = yValueField;
 	
-	/*
-	var margin = {top: 10, right: 80, bottom: 20, left: 50}, //var margin = {top: 10, right: 1, bottom: 30, left: 50},
-	width = 880 - margin.left - margin.right, //225 - margin.left - margin.right,
-	height = 185 - margin.top - margin.bottom; //300 - margin.top - margin.bottom;
-	*/
-	
-	timeSliderWidth = document.getElementById('timeSliderDiv').offsetWidth;
-	
-	var margin = {top: 10, right: 80, bottom: 20, left: 50}, //var margin = {top: 10, right: 1, bottom: 30, left: 50},
-	width = timeSliderWidth - 90 - margin.left - margin.right, //880 - margin.left - margin.right, //225 - margin.left - margin.right,
-	height = 185 - margin.top - margin.bottom; //300 - margin.top - margin.bottom;
-	
-	/*
 	var margin = {top: 10, right: 1, bottom: 30, left: 50},
 	width = 240 - margin.left - margin.right,
-	height = 315 - margin.top - margin.bottom;*/
+	height = 315 - margin.top - margin.bottom;
 			
 	//Adding the plot framwork to the application
 	var svg = addPlot(margin, width, height);
@@ -272,7 +229,7 @@ function d3CreateTransectPlot(transectPlot)
   		var circles = svg.selectAll(".dot");
   		var pnt = circles[0][selectedGraphIndex];
   		pnt.style.fill = "cyan";
-		pnt.style.stroke = "black";	
+		pnt.style.stroke = "cyan";	
 		pnt.setAttribute('r',6);	
   	}
 
@@ -348,7 +305,7 @@ function d3HighlighTransectPoint(pnt)
 	}
 		
 	pnt.style.fill = "cyan";
-	pnt.style.stroke = "black";	
+	pnt.style.stroke = "cyan";	
 	pnt.setAttribute('r',6);	
 }
 /**
@@ -386,121 +343,4 @@ function addPlot(margin, width, height)
 	return svg;
 }
 
-function kistersInitWidget(){
-	
-	chartingMode = "kisters";
 
-		require(["kisters/builds/kiWidgets"],function(){
-	
-			require(["kisters/widgets/tsWidget"],function(tsWidget){
-			try
-			{
-				var tsWidgetConf = {
-	
-						 floating:true, 
-						 tslist:[],
-						 currentFrom:"2010-01-01T00:00:00Z",
-						 currentTo:"2013-02-01T00:00:00Z",
-						 totalFrom:"2010-01-01T00:00:00Z", 
-						 totalTo:"2013-02-01T00:00:00Z", 
-						 width:"500",
-						 height:"450",
-						 baseUrl:"http://gisweb.kisters.de/dscwidget-servlet/DSCWidgetServlet",
-						customlogo:"http://gisweb.kisters.de/kiWidgets/service/kisters_nasa.png"				 
-				};
-						
-				var tsW = new tsWidget(tsWidgetConf,"tsWidget");		
-				//var tsW = new tsWidget(tsWidgetConf);	
-				
-				kistersWidget = tsW;
-				
-				console.log(map);
-			}
-			catch(err)
-			{
-				console.log(err);
-			 	//alert(err.message );
-			}
-				 
-			});		
-		
-		});		
-
-}
-
-function kistersAddPoint(geometry)
-{
-	if(kistersWidget != null)
-	{
-		//var	timeSliderWidth = document.getElementById('timeSliderDiv').offsetWidth;
-		timeSliderWidth = 1000;
-		//var width = timeSliderWidth - 130;
-		//Time Slider bar is 80% the panel, the margin on the left side of graph is 60, and 15 on the right
-		var width = 950; //(timeSliderWidth * .8) + 57;
-		//var marginWidth = (timeSliderWidth * .1) - 57;
-		
-		//dojo.byId('panel').style.margin = '0px 0px 0 50px';
-		dojo.byId('panel').style.margin = '0px 0px 0px ' + '0px';
-		
-		dojo.byId('panel').style.width = width+'px';
-		//dojo.byId('panel').style.align = 'center';
-		
-		kistersWidget.placeAt(dojo.byId('panel'));
-			
-		var lat = geometry.getLatitude();
-		var lon = geometry.getLongitude();
-		lat = lat.toFixed(3);
-		lon = lon.toFixed(3);
-		var tslist = [{srcid:"ldas",lat:lat, lon: lon,name: lat+","+lon }];
-		kistersWidget.addTsByLocation(tslist);	
-	}
-}
-
-function kistersUpdateGraphSize()
-{
-	if(kistersWidget != null)
-	{
-		var element = dojo.byId(kistersWidget.id);
-		element.remove();
-		
-		//var	timeSliderWidth = document.getElementById('timeSliderDiv').offsetWidth;
-		var	timeSliderWidth = 1200;
-		//var width = timeSliderWidth - 130;
-		//Time Slider bar is 80% the panel, the margin on the left side of graph is 60, and 15 on the right
-		var width = 1200; //(timeSliderWidth * .8) + 57;
-		//var marginWidth = (timeSliderWidth * .1) - 57;
-		
-		//dojo.byId('panel').style.margin = '0px 0px 0 50px';
-		//dojo.byId('panel').style.margin = '0px 0px 0px ' + marginWidth+'px';
-		
-		dojo.byId('panel').style.width = width+'px';
-		
-		var dim = new Array();
-		dim.w = width;
-		dim.h = 150;
-		kistersWidget.resize(dim);
-		//dojo.byId('panel').style.align = 'center';
-		
-		kistersWidget.placeAt(dojo.byId('panel'));
-	}
-}
-
-function kistersDeleteGraph()
-{
-	if(kistersWidget != null)
-	{
-		var	timeSliderWidth = 1000; //document.getElementById('timeSliderDiv').offsetWidth;
-		var width = timeSliderWidth;
-		dojo.byId('panel').style.margin = '0px 0px 0 0px';
-		dojo.byId('panel').style.width = width+'px';
-		
-		var element = dojo.byId(kistersWidget.id);
-		element.remove();
-	}
-}
-
-function kistersUpdateTimeGraphic(timeExtent)
-{
-	if(kistersWidget != null)
-		kistersWidget.setMarker(timeExtent.startTime,timeExtent.endTime);
-}
