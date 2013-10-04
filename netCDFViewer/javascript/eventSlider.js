@@ -1,6 +1,8 @@
 var timeSliderDateLabel = "Date: January";
 var selectedGraphIndex = 0;
 var currentDateTime = null;
+var timeSlicesTable = null;
+var eventSliderPlayActive = false;
 
 function EventSlider() {
 
@@ -15,11 +17,17 @@ function EventSlider() {
 	this.setTimeSliderDateLabel = d3SetTimeSliderDateLabel;
 	this.getTimeSliderDateLabel = d3GetTimeSliderDateLabel;
 	this.getDateTime = eventSliderGetDateTime;
+	this.isPlayActive = getEventSliderPlayActive;
 	this.isSlidersLastSpot = isLastStep;
 	this.isSlidersFirstSpot = isFirstStep;
 	this.moveSliderForward = eventSliderMoveForward;
 	this.moveSliderBackward = eventSliderMoveBackword;
+	this.playButtonClicked = eventSliderPlayButtonClicked;
+	this.updateChartSize = d3UpdateChartSize;
 	
+	
+	var myVar=setInterval(function(){myTimer();},3000);
+		
 	//Events
 	updateEventSliderTimeEvent = document.createEvent("Event");
 	//We need to let the mapping client know when a point has been selected on the map
@@ -27,6 +35,10 @@ function EventSlider() {
 }
 
 /****** Get/Set Properties *******************************/
+function getEventSliderPlayActive()
+{
+	return eventSliderPlayActive;
+}
 function d3GetTimeSliderDateLabel()
 {
 	return timeSliderDateLabel;
@@ -66,6 +78,13 @@ function queryForTimeSlices(){
     gp.execute(params, getTimeSlices);
 }
 
+
+function myTimer()
+{	
+	if(eventSliderPlayActive)
+		eventSliderMoveForward();
+}
+
 /**
  *Gets the unique time slices 
  */
@@ -75,7 +94,10 @@ function getTimeSlices(results, messages) {
 	currentDateTime = new Date(resultTables[0].features[0].attributes['time']);
 	timeSliderDateLabel = "Date: " + currentDateTime.toDateString(); 
 	document.dispatchEvent(updateEventSliderTimeEvent);	
-	d3CreateEventSlider(resultTables[0].features); 	
+	
+	timeSlicesTable = resultTables[0].features;
+	
+	d3CreateEventSlider(timeSlicesTable); 	
 } 
 
 /**
@@ -106,7 +128,7 @@ function d3CreateEventSlider(features)
 	var valueField = "SoilMoist1_GDS0_DBLY";
 	var timeField = "time";
 	
-	timeSliderWidth = 1000;
+	timeSliderWidth = getEventSliderWidth();
 	
 	var margin = {top: 20, right: 15, bottom: 20, left: 15}, //var margin = {top: 10, right: 1, bottom: 30, left: 50},
 	width = timeSliderWidth - 90 - margin.left - margin.right, //880 - margin.left - margin.right, //225 - margin.left - margin.right,
@@ -141,12 +163,7 @@ function d3CreateEventSlider(features)
 
 	svg.append("g").attr("class", "x axis").attr("transform", "translate(0," + height + ")").call(xAxis);
 
-	//svg.append("g").attr("class", "y axis").call(yAxis).append("text").attr("transform", "rotate(-90)").attr("y", 6).attr("dy", ".71em").style("text-anchor", "end").text(valueField);
-
-
 	svg.append("path").datum(features).attr("class", "line").attr("d", line);
-
-	//svg.append("path").datum(fillArea).attr("class", "area").attr("d", area);
 	
 	svg.selectAll(".invDot").data(features).enter().append("circle").attr("class", "invDot").attr("r", 2).attr("cx", function(d) {
 		return x(d.attributes[timeField]);
@@ -168,12 +185,14 @@ function d3CreateEventSlider(features)
         .text(timeSliderDateLabel);
 	
   	//We want to highlight the current view of the map
-  	var circles = svg.selectAll(".invDot");
-	var pnt = circles[0][0];
-	pnt.style.fill = "cyan";
-	pnt.style.stroke = "black";	
-	pnt.setAttribute('r',6);	
+	changeEventStep();	
+}
 
+function getEventSliderWidth()
+{
+	totalPossibleWidth = document.getElementById('eventSliderPanel').offsetWidth;
+	
+	return totalPossibleWidth * .97;
 }
 
 /**
@@ -190,12 +209,23 @@ function eventSliderMouseClick(d,i)
 	document.dispatchEvent(updateEventSliderTimeEvent);
 }
 
+function eventSliderPlayButtonClicked()
+{
+	if(eventSliderPlayActive)
+		eventSliderPlayActive = false;
+	else
+		eventSliderPlayActive = true;
+}
+
 /**
  *Move the event slider one spot forward to the next event 
  */
 function eventSliderMoveForward()
 {
-	selectedGraphIndex++;
+	if(!isLastStep())
+		selectedGraphIndex++;
+	else
+		selectedGraphIndex = 0;
 	
 	changeEventStep();
 	
@@ -282,3 +312,21 @@ function changeEventStep()
 	textAll[0][0].textContent = timeSliderDateLabel;
 }
 
+/**
+ * 
+ */
+function d3DeleteChart()
+{
+	var oldSVG = d3.select("#eventSliderPanel").select("svg");
+    if(oldSVG != null)
+    	oldSVG.remove();	
+}
+
+/**
+ * 
+ */
+function d3UpdateChartSize()
+{
+	d3DeleteChart();
+	d3CreateEventSlider(timeSlicesTable);
+}

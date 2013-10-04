@@ -111,7 +111,9 @@ function kistersInitWidget(){
 			catch(err)
 			{
 				console.log(err);
-			 	//alert(err.message );
+				var element = dojo.byId("tsWidget");
+				element.style.height = '0px';
+			 	element.style.margin = '0px';
 			}
 				 
 			});		

@@ -124,6 +124,10 @@ function resetLayout(){
 		//When the application is resized, we want to refresh the graph
 		esriMapOb.UpdateChartSize();
 	}
+	if(eventSliderOb != null)
+	{
+		eventSliderOb.updateChartSize();
+	}
 }
 
 /**
@@ -152,7 +156,20 @@ function animationGoBackward()
  */
 function animationPlay()
 {
-	//TODO: Need to implement.
+	if(eventSliderOb != null)
+	{
+		eventSliderOb.playButtonClicked();
+		
+		var playButton = document.getElementById('animPlayBtn');
+		var img = playButton.children[0];
+		
+		
+		if(eventSliderOb.isPlayActive())
+			img.src = "./images/Button-Pause-16.png";
+		else
+			img.src = "./images/Button-Play-16.png";
+		
+	}
 }
 
 /**
@@ -232,6 +249,10 @@ var utils = {
 		
 		tb.deactivate();
 		
+		document.getElementById('panel').style.height = '185px';
+
+		dijit.byId("mainWindow").resize();
+				
 		if(esriMapOb == null)
 			esriMapOb = new esriMap(map,config.GPTaskService);
 	
