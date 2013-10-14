@@ -4,6 +4,7 @@ This template provides the ability to view a time-enabled netCDF Map Service fro
 This template can be configured by defining the map, title, subtitle and GP Service querying the netCDF file.
 
 [View it live](http://dtc-sci01.esri.com/MultidimensionalTemplate/index.html?appid=d73011dceb0e41d0af334912355bddd5)
+
 ![App](https://raw.github.com/kevinsigwart/AGOL_MultiDimTemplate/master/ApplicationScreenShot.png)
 
 ## Features
