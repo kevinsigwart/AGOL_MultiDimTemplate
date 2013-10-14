@@ -1,11 +1,10 @@
 dojo.require("esri.map");
 dojo.require('esri.dijit.Attribution');
 dojo.require("esri.arcgis.utils");
-dojo.require("esri.dijit.Legend");
-dojo.require("esri.dijit.TimeSlider");
 dojo.require("esri.dijit.Scalebar");
-dojo.require("esri.IdentityManager");
+dojo.require("esri.dijit.BasemapGallery");
 dojo.require("esri.geometry");
+dojo.require("esri.geometry.Point");
 dojo.require("esri.tasks.geometry");
 dojo.require("dojo/json");
 
@@ -16,10 +15,13 @@ dojo.require("dojo/json");
   var i18n;
   var returnTable = null;
   var transectFeatures = null;
-  var mode = "PointMode";
-  var chart = null;
+  var mode = "EventSlider"; //Toggle between EventSlider and Charting Mode.
+
   var esriMapOb = null;
-  
+  var eventSliderOb = null;
+  var eventSliderTimeChartOb = null;
+  var netCDFGPQueryOb = null;
+    
   
    function initMap() {
    	
@@ -29,7 +31,7 @@ dojo.require("dojo/json");
        
       
       //read the legend header text from the localized strings file 
-      dojo.byId('legendHeader').innerHTML = i18n.tools.legend.label;
+      //dojo.byId('legendHeader').innerHTML = i18n.tools.legend.label;
 
       
       if(configOptions.geometryserviceurl && location.protocol === "https:"){
@@ -90,7 +92,7 @@ function setUpMap() {
 			slider : true,
 			sliderStyle : 'small',
 			nav : false,
-			showAttribution : true,
+			showAttribution : false,
 			wrapAround180 : true
 		},
 		ignorePopups : false,
@@ -105,9 +107,9 @@ function setUpMap() {
 		map = response.map;
 		var layers = response.itemInfo.itemData.operationalLayers;
 		//get any time properties that are set on the map
-		if (response.itemInfo.itemData.widgets && response.itemInfo.itemData.widgets.timeSlider) {
+		/*if (response.itemInfo.itemData.widgets && response.itemInfo.itemData.widgets.timeSlider) {
 			timeProperties = response.itemInfo.itemData.widgets.timeSlider.properties;
-		}
+		}*/
 		if (map.loaded) {
 			initUI(layers);
 		} else {
@@ -126,11 +128,20 @@ function setUpMap() {
 }
 
 function resetLayout(){
-	if(esriMapOb != null){
+	if(eventSliderOb != null){
 		//When the application is rezied, we want to refresh the graph
-		esriMapOb.UpdateTime();
-	}
-	
+		//esriMapOb.UpdateTime();
+		eventSliderOb.updateChartSize();
+		document.getElementById('eventSliderPanel').style.height = '45px';
+		
+		if(eventSliderTimeChartOb != null)
+		{
+			dateTime = eventSliderOb.getDateTime();
+			results = netCDFGPQueryOb.getResultsTable();
+			eventSliderTimeChartOb.createTimeSeriesChart(results[0].features,dateTime);  	
+		}
+
+	}	
 }
 
 function removeSelections()
@@ -142,10 +153,20 @@ function removeSelections()
 
 function clearGraphics()
 {
+	
+	mode = "EventSlider";
+	
 	if(esriMapOb != null){
 		esriMapOb.clearGraphics();
+		eventSliderTimeChartOb.remove();
+		
+		document.getElementById('panel').style.height = '0px';
+		document.getElementById('panel').style.padding = '0px';
+		document.getElementById('timeSliderFooter').style.height = '55px';
+		document.getElementById('eventSliderPanel').style.height = '45px';
+		document.getElementById('loadingImg').hidden = true;
+		//document.getElementById('timeSliderFooter').style.padding = '0px';
 	}
-
 }
 
 var utils = {
@@ -168,202 +189,210 @@ var utils = {
 	}
 };	
 
-
-	function addGraphic(geometry) {
-		
-		tb.deactivate();
-		
-		if(esriMapOb == null)
-			esriMapOb = new esriMap(map,config.GPTaskService);
-
-		  var type = geometry.type;
-          if (type === "point" || type === "multipoint") {
-          	mode = "PointMode";
-          	esriMapOb.addPointToMap(geometry);
-            //addPointToMap(geometry);
-          }
-          else if (type === "line" || type === "polyline") {
-          	mode = "LineMode";
-          	esriMapOb.addTransectToMap(geometry);
-            //addLineToMap(geometry);
-          }        
-	  }
-
-   function initUI(layers) {
+function initUI(layers) {
    			
    	tb = new esri.toolbars.Draw(map);
     dojo.connect(tb, "onDrawEnd", addGraphic);
         
     //add chrome theme for popup
     dojo.addClass(map.infoWindow.domNode, "chrome");
+    
+    /*
     //add the scalebar 
     var scalebar = new esri.dijit.Scalebar({
       map: map,
       scalebarUnit: i18n.viewer.main.scaleBarUnits //metric or english
-    }); 
-    
-    //create the legend - exclude basemaps and any note layers
-    var layerInfo = buildLayersList(layers);  
-    if(layerInfo.length > 0){
-      var legendDijit = new esri.dijit.Legend({
-        map:map,
-        layerInfos:layerInfo
-      },"legendDiv");
-      legendDijit.startup();
-    }
-    else{
-      dojo.byId('legendDiv').innerHTML = i18n.tools.legend.layerMessage;
-    }
-    
-    
+    }); */
+        
     if(esriMapOb == null)
 		esriMapOb = new esriMap(map,config.GPTaskService);
-			
-    //check to see if the web map has any time properties
+	
+	if(netCDFGPQueryOb == null)
+    {
+    	netCDFGPQueryOb = new NetCDFGPQuery(config.GPTaskService);
+    	document.addEventListener("NetCDFGPQueryGotQueryResults",gotNetCDFQueryResults,false);
+    }
     
-    if(timeProperties){
 
-      var startTime = timeProperties.startTime;
-      var endTime = timeProperties.endTime;
-      var fullTimeExtent = new esri.TimeExtent(new Date(startTime), new Date(endTime));
-
-      map.setTimeExtent(fullTimeExtent);
-      //create the slider
-      timeSlider = new esri.dijit.TimeSlider({
-        style: "width: 100%;"
-      }, dojo.byId("timeSliderDiv"));
-      
-      timeSlider.loop = config.loop;
-      
-      map.setTimeSlider(timeSlider);
-      //Set time slider properties 
-      timeSlider.setThumbCount(timeProperties.thumbCount);
-      //timeSlider.setThumbCount(1);
-      timeSlider.setThumbMovingRate(timeProperties.thumbMovingRate);
-      //define the number of stops
-      if(timeProperties.numberOfStops){
-        timeSlider.createTimeStopsByCount(fullTimeExtent,timeProperties.numberOfStops);
-      }else{
-        timeSlider.createTimeStopsByTimeInterval(fullTimeExtent,timeProperties.timeStopInterval.interval,timeProperties.timeStopInterval.units);
-      }
-      //set the thumb index values if the count = 2
-      if(timeSlider.thumbCount ==2){
-        timeSlider.setThumbIndexes([0,1]);
-      }
-
-
-      dojo.connect(timeSlider,'onTimeExtentChange',function(timeExtent){
-        //update the time details span.
-        var timeString; 
-        if(timeProperties.timeStopInterval !== undefined){
-        switch(timeProperties.timeStopInterval.units){   
-        case 'esriTimeUnitsCenturies':	
-          datePattern = 'yyyy G';
-          break;          
-        case 'esriTimeUnitsDecades':
-          datePattern = 'yyyy';
-          break;  
-         case 'esriTimeUnitsYears':
-          datePattern = 'MMMM yyyy';
-          break;
-        case 'esriTimeUnitsWeeks':	 
-          datePattern = 'MMMM d, yyyy';
-          break;
-        case 'esriTimeUnitsDays':
-          datePattern = 'MMMM d, yyyy';
-          break;        
-        case 'esriTimeUnitsHours':
-          datePattern = 'h:m:s.SSS a';
-          break;
-        case 'esriTimeUnitsMilliseconds':
-          datePattern = 'h:m:s.SSS a';
-          break;          
-        case 'esriTimeUnitsMinutes':
-          datePattern = 'h:m:s.SSS a';
-          break;          
-        case 'esriTimeUnitsMonths':
-          datePattern = 'MMMM, y';
-          break;          
-        case 'esriTimeUnitsSeconds':
-          datePattern = 'h:m:s.SSS a';
-          break;          
-      }
-       var startTime=formatDate(timeExtent.startTime,datePattern);
-       var endTime = formatDate(timeExtent.endTime,datePattern);
-       //timeString= esri.substitute({"start_time": startTime, "end_time": endTime}, i18n.tools.time.timeRange);
-       
-       //Show one month
-       timeString = esri.substitute({"time":formatDate(timeExtent.endTime,datePattern)},i18n.tools.time.timeRangeSingle);
-      }
-      else{
-       timeString = esri.substitute({"time":formatDate(timeExtent.endTime,datePattern)},i18n.tools.time.timeRangeSingle);
-
-      }
-
-        dojo.byId('timeSliderLabel').innerHTML =  timeString;
-        if(esriMapOb != null)
-        {
-        	esriMapOb.UpdateTime();
-        }
-                
-      });
-
-      timeSlider.startup();
-
-   }
-  }
-  function formatDate(date,datePattern){
-    return dojo.date.locale.format(date, {
-        selector: 'date',
-        datePattern: datePattern
-      });
+    if(eventSliderOb == null)
+    {
+    	eventSliderOb = new EventSlider();
+    	document.addEventListener("EventSliderDateChanged",updateMapTime,false);
+    	//For some reason, I need to set this within the code.  Have to figure out why.
+    	document.getElementById('eventSliderPanel').style.height = '45px';
+    	
+    	//Need to prime the Event Slider with time slices.
+    	var point = new esri.geometry.Point(-99.7230062499967,38.466490312843504);
+    	netCDFGPQueryOb.queryPoint(point);
+    }
+    
+    if(eventSliderTimeChartOb == null)
+    {
+    	eventSliderTimeChartOb = new EventSliderTimeChart();
+    	document.addEventListener("EventSliderChartNewDotSelection",eventSliderChartPointSelectionUpdate,false);
+    }	
   }
   
-  function buildLayersList(layers){
 
- //layers  arg is  response.itemInfo.itemData.operationalLayers;
-  var layerInfos = [];
-  dojo.forEach(layers, function (mapLayer, index) {
-      var layerInfo = {};
-      if (mapLayer.featureCollection && mapLayer.type !== "CSV") {
-        if (mapLayer.featureCollection.showLegend === true) {
-            dojo.forEach(mapLayer.featureCollection.layers, function (fcMapLayer) {
-              if (fcMapLayer.showLegend !== false) {
-                  layerInfo = {
-                      "layer": fcMapLayer.layerObject,
-                      "title": mapLayer.title,
-                      "defaultSymbol": false
-                  };
-                  if (mapLayer.featureCollection.layers.length > 1) {
-                      layerInfo.title += " - " + fcMapLayer.layerDefinition.name;
-                  }
-                  layerInfos.push(layerInfo);
-              }
-            });
-          }
-      } else if (mapLayer.showLegend !== false && mapLayer.layerObject) {
-      var showDefaultSymbol = false;
-      if (mapLayer.layerObject.version < 10.1 && (mapLayer.layerObject instanceof esri.layers.ArcGISDynamicMapServiceLayer || mapLayer.layerObject instanceof esri.layers.ArcGISTiledMapServiceLayer)) {
-        showDefaultSymbol = true;
-      }
-      layerInfo = {
-        "layer": mapLayer.layerObject,
-        "title": mapLayer.title,
-        "defaultSymbol": showDefaultSymbol
-      };
-        //does it have layers too? If so check to see if showLegend is false
-        if (mapLayer.layers) {
-            var hideLayers = dojo.map(dojo.filter(mapLayer.layers, function (lyr) {
-                return (lyr.showLegend === false);
-            }), function (lyr) {
-                return lyr.id;
-            });
-            if (hideLayers.length) {
-                layerInfo.hideLayers = hideLayers;
-            }
-        }
-        layerInfos.push(layerInfo);
-    }
-  });
-  return layerInfos;
+
+function addGraphic(geometry) {
+	
+	tb.deactivate();
+	eventSliderTimeChartOb.remove();
+	document.getElementById('panel').style.height = '190px';
+	document.getElementById('panel').style.padding = '2px';
+	document.getElementById('panel').style.paddingTop = '10px';
+	document.getElementById('timeSliderFooter').style.height = '0px';
+	document.getElementById('timeSliderFooter').style.padding = '0px';
+	document.getElementById('loadingImg').hidden = false;
+		
+	dijit.byId("mainWindow").resize();
+	
+	if(esriMapOb == null)
+		esriMapOb = new esriMap(map,config.GPTaskService);
+	
+	  var type = geometry.type;
+	  if (type === "point" || type === "multipoint") {
+	  	mode = "TimeChart";
+	  	esriMapOb.addPointToMap(geometry);
+	  	netCDFGPQueryOb.queryPoint(geometry);
+	  }    
+}
+
+function animationShow(ob)
+{
+	graphingWidget.style.top = '130px';
+}  
+
+function animationHide(ob)
+{
+	graphingWidget.style.top = '60px';
+}  
+  /**
+   * 
+   */
+  function eventSliderChartPointSelectionUpdate(ob)
+  {
+  	 if(eventSliderOb != null && esriMapOb != null)
+  	 {
+  	 	var obSelDateTime = ob.selectedDateTime;
+	  	
+	  	//Update Time Slider
+	  	eventSliderOb.selectNewTimeStep(obSelDateTime);
+	  	
+	  	//Update Map Extent
+	  	esriMapOb.UpdateMapTime(obSelDateTime);	
+	  	
+		//Update Animation Widget with Proper Text and Buttons
+		updateAnimationWidget(obSelDateTime);
+	  }
+  	
   }
+  
+  function gotNetCDFQueryResults()
+  {
+  		results = netCDFGPQueryOb.getResultsTable();
+  		timeField = netCDFGPQueryOb.getTimeField();
+  		valueField = netCDFGPQueryOb.getOutputValueField();
+  		
+  		//We need to determine if we are building out the Event Slider which just shows the
+  		//time steps or the Chart which graphs a points values
+  		if(mode === "EventSlider")
+  		{
+  			eventSliderOb.setTimeField(timeField);
+  			eventSliderOb.createEventSlider(results[0].features);
+  		}
+  		else if (mode == "TimeChart")
+  		{
+	  		var timeExtent = map.timeExtent;
+	  		
+	  		//Once we have the results we want to hide the loading image.
+	  		document.getElementById('loadingImg').hidden = true;
+	  		
+	  		eventSliderTimeChartOb.setYFieldName(valueField);
+	  		eventSliderTimeChartOb.setDimensionFieldName(timeField);
+	  		eventSliderTimeChartOb.createTimeSeriesChart(results[0].features,timeExtent.startTime);
+  		}
+  }
+  
+  function updateAnimationWidget(dateTime)
+  {
+	  	animationDateTimeLabel.textContent = dateTime.toDateString(); 
+		  	 	
+  	 	if(eventSliderOb.isSlidersLastSpot()) 
+  	 		animForwardBtn.disabled = true;
+  	 	else
+  	 		animForwardBtn.disabled = false;
+  	 		
+  	 	if(eventSliderOb.isSlidersFirstSpot())
+  	 		animBackwordBtn.disabled = true;
+  	 	else
+  	 		animBackwordBtn.disabled = false;  	
+  }
+  
+  /***
+   * Event Handler Listener function for when the Event Sliders Date Changes. 
+   * We want to update our Animation Widgets Date to be the same as the Event Slider
+   * Also Enable/Disable the Animation buttons depending on where we are at within the
+   * Event Slider.  For example disable the Forward button when we are at the last event
+   * within the map.
+   */
+  function updateMapTime()
+  {
+  	 if(eventSliderOb != null)
+  	 {
+  	 	dateTime = eventSliderOb.getDateTime();
+
+  	 	esriMapOb.UpdateMapTime(dateTime);
+
+		if(netCDFGPQueryOb != null && eventSliderTimeChartOb != null && netCDFGPQueryOb.getResultsTable() != null)
+		{
+  			results = netCDFGPQueryOb.getResultsTable();
+  		  		
+  			eventSliderTimeChartOb.createTimeSeriesChart(results[0].features,dateTime);  	
+  		} 			
+  	 	
+  	 	updateAnimationWidget(dateTime);
+  	 }
+  }
+  /**
+ *Move the Event Slider to the next event. 
+ */
+function animationGoForward()
+{
+	if(eventSliderOb != null)
+	{
+		eventSliderOb.moveSliderForward();
+	}
+}
+/**
+ *Move the Event Slider to the previous event. 
+ */
+function animationGoBackward()
+{
+	if(eventSliderOb != null)
+	{
+		eventSliderOb.moveSliderBackward();
+	}
+}
+
+/**
+ *Animates through all the events.
+ */
+function animationPlay()
+{
+	if(eventSliderOb != null)
+	{
+		eventSliderOb.playButtonClicked();
+		
+		var playButton = document.getElementById('animPlayBtn');
+		var img = playButton.children[0];
+		
+		
+		if(eventSliderOb.isPlayActive())
+			img.src = "./images/Button-Pause-16.png";
+		else
+			img.src = "./images/Button-Play-16.png";
+		
+	}
+}

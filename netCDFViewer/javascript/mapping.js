@@ -7,13 +7,11 @@ var gpTask = "";
 var geomService = "";
 var resultTables = [];
 var chart = null;
-var inputParamaterName = "";
+var inputParamaterName = "InputPnt";
 
 
 function esriMap(esrimap,gpTaskString){
 
-	//Properties
-	//gpTask = "http://wdcb4.esri.com/arcgis/rest/services/201212_NetCDF_Viewer/MakeNetCDFTable_Norfolk/GPServer/Make%20NetCDF%20Table%20Script";
 	gpTask = gpTaskString;
 	
 	//TODO: Use Geom Service Template Variable
@@ -22,73 +20,25 @@ function esriMap(esrimap,gpTaskString){
 	chart = new D3Charting();
 	
 	//Get row dimension and value variables from Output Parameters
-	getParameterValues(gpTask);
+	//getParameterValues(gpTask);
 	
 	//Event for when the chart is updated
 	document.addEventListener("ChartPointSelected",graphSelectIndexChanged,false);
 	document.addEventListener("UpdateChart",graphUpdateChart,false);
 	
-	dojo.connect(map.graphics,"onClick",esriSelectGraphic);
-	dojo.connect(map.graphics,"onDblClick",esriGraphicDoubleClick);
+	//dojo.connect(map.graphics,"onClick",esriSelectGraphic);
+	//dojo.connect(map.graphics,"onDblClick",esriGraphicDoubleClick);
 	
 	//Events
 	this.clearGraphics = esriMapClearGraphics;
 	this.removeSelections = esriMapRemoveSelections;
 	this.addPointToMap = esriMapAddPointToMap;
 	this.addTransectToMap = esriMapAddTransectToMap;
-	this.UpdateTime = esriMapTimeExtentChange;	
+	//this.UpdateTime = esriMapTimeExtentChange;	
+	this.UpdateMapTime = esriMapUpdateTimeExtent;
 }
 
-/**********Gp Service Functions******************************************/
-/**
- *We hit the rest end point to get the format of the output table schema.  THis way we
- * know what the x Variable and y Variable to graph are. 
- */
-function getParameterValues(gpTask){
 
-	//var url = gpTask + "?f=json";
-	var dataUrl = gpTask + "?f=json";
-	
-	
-	//var targetNode = dojo.byId("licenseContainer");
-	// The parameters to pass to xhrGet, the url, how to handle it, and the callbacks.
-	//TODO:Switch to using DOJO Request/Promise
-	var xhrArgs = {
-		url : dataUrl,
-		//handleAs : "json",
-		//preventCache : true,
-		load : function(data) {
-
-			var gotFieldValues = false;
-			
-			//TODO:  Check if this is asynchronous
-			
-			dojo.forEach(data.parameters, function(parameter){
-				if(parameter.direction == "esriGPParameterDirectionOutput" && parameter.dataType == "GPRecordSet")
-				{
-					var table = parameter.defaultValue;
-					var rowDimFieldValue = table.fields[1].name;
-					var valueFieldValue = table.fields[2].name;
-					chart.setDimensionFieldName(rowDimFieldValue);
-					chart.setYFieldName(valueFieldValue);
-					gotFieldValues = true;
-				}
-				else if(parameter.direction == "esriGPParameterDirectionInput" && parameter.dataType == "GPFeatureRecordSetLayer")
-				{
-					inputParamaterName = parameter.name;
-				}
-			});
-			
-			if(!gotFieldValues)
-				alert("Invalid Input GP Service.\nPlease check your GP Service Configured Variable");
-		},
-		error : function(error) {
-			alert("Invalid Input GP Service.\nPlease check your GP Service Configured Variable");
-		}
-	};
-
-	esri.request(xhrArgs);	
-}
 
 /**************** Chart Events ******************************************/
 /**
@@ -125,18 +75,32 @@ function esriMapTimeExtentChange()
 }
 
 /**
+ * When the time extent on the map changes we need to update the Kisters chart to highlight it on
+ * their chart.  Our data is summerized by month and their data is in 3 hour increments, so we highlight
+ * the entire month. 
+ * @param {Object} dateTime
+ */
+function esriMapUpdateTimeExtent(dateTime)
+{
+	var timeExtent = new esri.TimeExtent();
+	timeExtent.startTime = dateTime;
+	map.setTimeExtent(timeExtent); 
+}  
+
+/**
  *Updates the charts based on the current map time extent 
  */
 function esriMapUpdateChartTime(index)
 { 	
 	var timeExtent = map.timeExtent;
-	var endDate = timeExtent.endTime;
+	//var endDate = timeExtent.endTime;
+	var endDate = timeExtent.startTime;
 	
 	var mode = chart.getChartingMode();	
 	if(mode == "PointMode")
 	{
 		chart.setSelectedGraphIndex(-1);
-		esriMapCreateChart(resultTables[index]); 
+		esriMapCreateChart(resultTables[0]); 
     }
     else if(mode == "TransectLineMode")
     {
@@ -265,9 +229,9 @@ function esriMapsClearMapGraphicSelections()
 function esriMapClearGraphics() {
 
 	map.graphics.clear();  
-	chart.remove();  
-	chart.setSelectedGraphIndex(-1);
-	resultTables = [];
+	//chart.remove();  
+	//chart.setSelectedGraphIndex(-1);
+	//resultTables = [];
 }
 
 /**
@@ -306,51 +270,13 @@ function esriMapAddPointToMap(geometry)
     map.graphics.clear();
     
     map.graphics.add(graphic);
-        	    
-    var gp = new esri.tasks.Geoprocessor(gpTask);
     
-    //We reproject the points into WGS84 for the service.
-    var features= [];
-    var repoGeom = esri.geometry.webMercatorToGeographic(geometry);
-    var repoGraphic = new esri.Graphic(repoGeom,symbol);
-    features.push(repoGraphic);
-    var featureSet = new esri.tasks.FeatureSet();
-    featureSet.features = features;
+    map.centerAt(geometry);
     
-    var params = []; //{ inputParamaterName:featureSet };
-    params[inputParamaterName] = featureSet;
-    
-    gp.execute(params, esriMapGetTable);
 }
 
-/**
- *Gets the results from the GP Service and plots them over time. 
- */
-function esriMapGetTable(results, messages) {
-			
-	var seriesValues = [];
-	var seriesValuesSub = [];
-	var timeExtent = map.timeExtent;
-	var endDate = timeExtent.endTime;
-	
-	resultTables = [results[0].value];
-	//updateChart(returnTable);  	   
-	
-	esriMapCreateChart(resultTables[0]); 
-}
-/**
- *Plots the table over values over time.
- */
-function esriMapCreateChart(table)
-{		
-	chart.remove();
-	    					
-	//We fill in the graph up the latest date within the current time range of the map.
-	//This lets the user see what the current value is.
-	var fillArea = esriMapGetTimeSubsetAreaPlot(table);
-	
-	chart.createTimeSeriesChart(table.features, fillArea);		
-}
+
+
 /**
  * We only want values up the the current time in the time-slider.  This is used
  * to create an area plot of the values up to the current time. 
@@ -358,7 +284,7 @@ function esriMapCreateChart(table)
 function esriMapGetTimeSubsetAreaPlot(table)
 {
 	var timeExtent = map.timeExtent;
-	var endDate = timeExtent.endTime;
+	var endDate = timeExtent.startTime;
 	
 	//We fill in the graph up the latest date within the current time range of the map.
 	//This lets the user see what the current value is.

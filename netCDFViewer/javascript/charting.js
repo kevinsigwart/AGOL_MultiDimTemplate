@@ -1,11 +1,14 @@
 //Global Variables.  These are needed in the events so the have to be global
-var yValueField = "";
-var dimension = "";
+var yValueField = "SoilMoist1_GDS0_DBLY";
+var dimension = "time";
 
 var chartingMode = "";
 var selectedGraphIndex = -1;
 var chartPointSelectedEvent;
 var updateChartEvent;
+
+/***CURRENTLY DEPRICATED***********/
+/***KEEPING AROUND BECAUSE Some Functionality may be added back***********/
 
 function D3Charting() {
 
@@ -19,8 +22,7 @@ function D3Charting() {
 	chartPointSelectedEvent.initEvent("ChartPointSelected",true,true);
 	//Only using this when a plot point has been double clicked
 	updateChartEvent.initEvent("UpdateChart",true,true);
-	
-		
+			
 	//Methods  
 	this.createTimeSeriesChart = d3CreateTimeSeriesChart;
 	this.remove = d3RemoveChart;
@@ -111,20 +113,17 @@ function d3RemoveChart() {
  * @param {Object} features:  All the features that make up the time series (be sure the features have both a value and dimension property)
  * @param {Object} fillArea:  Only include the features up to a certain date/time.
  */
-function d3CreateTimeSeriesChart(features, fillArea)
+function d3CreateTimeSeriesChart(features, currentDateTime)
 {	
 	var valueField = yValueField;
 	var timeField = dimension;
 	
-	timeSliderWidth = document.getElementById('timeSliderDiv').offsetWidth;
+	chartingWidth = getD3ChartWidth();
 	
-	var margin = {top: 10, right: 80, bottom: 20, left: 50}, //var margin = {top: 10, right: 1, bottom: 30, left: 50},
-	width = timeSliderWidth - 90 - margin.left - margin.right, //880 - margin.left - margin.right, //225 - margin.left - margin.right,
+	//var margin = {top: 10, right: 80, bottom: 20, left: 50}, //var margin = {top: 10, right: 1, bottom: 30, left: 50},
+	var margin = {top: 20, right: 15, bottom: 20, left: 45},
+	width = 940 - margin.left - margin.right; //chartingWidth; //880 - margin.left - margin.right, //225 - margin.left - margin.right,
 	height = 185 - margin.top - margin.bottom; //300 - margin.top - margin.bottom;
-	
-	
-	
-	
 	
 	//Adding the plot framwork to the application
 	var svg = addPlot(margin, width, height);
@@ -142,12 +141,6 @@ function d3CreateTimeSeriesChart(features, fillArea)
 		return y(d.attributes[valueField]);
 	});		
 	
-	var area = d3.svg.area().x(function(d) {
-		return x(d.attributes[timeField]);
-	}).y0(height).y1(function(d) {
-		return y(d.attributes[valueField]);
-	}); 
-		
 	
 	x.domain(d3.extent(features, function(d) {
 		return d.attributes[timeField];
@@ -159,14 +152,13 @@ function d3CreateTimeSeriesChart(features, fillArea)
 
 	svg.append("g").attr("class", "x axis").attr("transform", "translate(0," + height + ")").call(xAxis);
 
-	svg.append("g").attr("class", "y axis").call(yAxis).append("text").attr("transform", "rotate(-90)").attr("y", 6).attr("dy", ".71em").style("text-anchor", "end").text(valueField);
+	svg.append("g").attr("class", "y axis").call(yAxis).append("text").attr("transform", "rotate(-90)").attr("y", 6).attr("dy", "-40").style("text-anchor", "end").text(valueField);
 
 
 	svg.append("path").datum(features).attr("class", "line").attr("d", line);
 
-	//svg.append("path").datum(fillArea).attr("class", "area").attr("d", area);
 
-	svg.selectAll(".invDot").data(features).enter().append("circle").attr("class", "invDot").attr("r", 1.5).attr("cx", function(d) {
+	svg.selectAll(".invDot").data(features).enter().append("circle").attr("class", "invDot").attr("r", 2).attr("cx", function(d) {
 		return x(d.attributes[timeField]);
 	}).attr("cy", function(d) {
 		return y(d.attributes[valueField]);
@@ -174,13 +166,55 @@ function d3CreateTimeSeriesChart(features, fillArea)
 		return valueField + ": " + d.attributes[valueField] + "\n" + timeField + ": " + (new Date(d.attributes[timeField])).toDateString();
 	}); 
 	
+	var timeSliderDateLabel = currentDateTime.toDateString();
+	
+	svg.append("text")
+    .attr("x", (width / 2))          
+    .attr("y", 0 - (margin.top / 2))
+    .attr("id", "Title")
+    .attr("text-anchor", "middle")  
+    .style("font-size", "14px") 
+    .style("text-decoration", "underline")  
+    .text(timeSliderDateLabel);
+    
   	//We want to highlight the current view of the map
-  	var circles = svg.selectAll(".invDot");
-	var pnt = circles[0][fillArea.length - 1];
-	pnt.style.fill = "cyan";
-	pnt.style.stroke = "black";	
-	pnt.setAttribute('r',6);	
+  	selectActivePoint(currentDateTime);
 
+}
+
+/**
+ *Highlights the selected point and sets the other points back to the original value 
+ */
+function selectActivePoint(dateTime)
+{
+	var svg = d3.select("#panel").select("svg");
+	
+	var circles = svg.selectAll(".invDot");
+	for(var index = 0; index < circles[0].length; index++)
+	{
+		var chartDotCircle = circles[0][index];
+		
+		var dotDateValue = new Date(chartDotCircle.__data__.attributes[dimension]);
+		
+		if(dotDateValue.getTime() == dateTime.getTime()) 
+		{
+			chartDotCircle.style.fill = "cyan";		
+			chartDotCircle.style.stroke = "black";	
+			chartDotCircle.setAttribute("r", 6);	
+			
+			var chartValue = chartDotCircle.__data__.attributes[yValueField];
+			var chartingDateLabel = "Date" + ": " + dotDateValue.toDateString(); 
+	
+			var textAll = svg.selectAll("#Title");
+			textAll[0][0].textContent = chartingDateLabel;		
+		}
+		else
+		{
+			chartDotCircle.style.fill = "";		
+			chartDotCircle.style.stroke = "";
+			chartDotCircle.setAttribute("r", 2);
+		}
+	}
 }
 
 /**
@@ -197,10 +231,10 @@ function d3CreateTransectPlot(transectPlot)
 	height = 185 - margin.top - margin.bottom; //300 - margin.top - margin.bottom;
 	*/
 	
-	timeSliderWidth = document.getElementById('timeSliderDiv').offsetWidth;
+	chartingWidth = getD3ChartWidth();
 	
 	var margin = {top: 10, right: 80, bottom: 20, left: 50}, //var margin = {top: 10, right: 1, bottom: 30, left: 50},
-	width = timeSliderWidth - 90 - margin.left - margin.right, //880 - margin.left - margin.right, //225 - margin.left - margin.right,
+	width = chartingWidth - margin.left - margin.right, //880 - margin.left - margin.right, //225 - margin.left - margin.right,
 	height = 185 - margin.top - margin.bottom; //300 - margin.top - margin.bottom;
 	
 	/*
@@ -260,6 +294,13 @@ function d3CreateTransectPlot(transectPlot)
 		pnt.setAttribute('r',6);	
   	}
 
+}
+
+function getD3ChartWidth()
+{
+	totalPossibleWidth = document.getElementById('panel').offsetWidth;
+	
+	return totalPossibleWidth * .85;
 }
 
 /***

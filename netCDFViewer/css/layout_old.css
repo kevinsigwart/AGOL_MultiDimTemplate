@@ -13,12 +13,12 @@ td {vertical-align:top;}
 
     #header {
       border:solid 1px #999;
-      background-color:#e3e9ee;
-      -webkit-border-bottom-left-radius:4px;
-      -webkit-border-bottom-right-radius:4px;
-      -moz-border-radius-bottomleft:4px;
-      -moz-border-radius-bottomright:4px;
-      height:47px;
+      height:70px;
+      background:url(../images/chrome_headerbg.png) #969696 repeat-x;
+      -webkit-border-top-left-radius:4px;
+      -webkit-border-top-right-radius:4px;
+      -moz-border-radius-topleft:4px;
+      -moz-border-radius-topright:4px;
       border-top-left-radius:4px;
       border-top-right-radius:4px;
       margin:0;
@@ -26,11 +26,11 @@ td {vertical-align:top;}
 
     #title {
       color:#334453;
-      font-size:28px;
+      font-size:30px;
       text-align:left;
       font-weight:bolder;
       text-shadow:0 1px 0 #EEE;
-      padding-top:0px;
+      padding-top:10px;
       padding-left:15px;
       white-space: nowrap;  
       overflow: hidden;  
@@ -39,13 +39,72 @@ td {vertical-align:top;}
     }
 
     #subtitle {
-      font-size:12px;
+      font-size:14px;
       color:#444;
       padding-left:15px;
       white-space: nowrap;  
       overflow: hidden;  
       text-overflow: ellipsis;
       -o-text-overflow:ellipsis;
+    }
+
+
+    #leftPane {
+      background-color:#e3e9ee;
+      border-left:solid 1px #999;
+      width:20%;
+      margin:0;
+      padding:0;
+    }
+
+
+    #leftPaneContent {
+      background-color:#e3e9ee;
+      height:100%;
+      width:100%;
+      margin:0;
+      padding:0;
+    }
+    
+    #leftPaneContent2 {
+      background-color:#e3e9ee;
+      height:100%;
+      width:100%;
+      margin:0;
+      padding:0;
+    }
+
+    #leftPaneHeader {
+      background:url(../images/chrome_leftheaderbg.png) repeat-x;
+      border-bottom:solid 1px #999;
+      color:#FFF;
+      height:24px;
+      font-size:18px;
+      line-height:22px;
+      overflow:hidden;
+      margin:0;
+      padding:10px 10px 10px 15px;
+    }
+
+    #leftPaneHeader2 {
+      background:url(../images/chrome_leftheaderbg.png) repeat-x;
+      border-bottom:solid 1px #999;
+      color:#FFF;
+      height:24px;
+      font-size:18px;
+      line-height:22px;
+      overflow:hidden;
+      margin:0;
+      padding:10px 10px 10px 15px;
+    }
+
+
+    #leftPaneBody {
+      margin:0;
+    }
+
+    #leftPaneBody .panel_content {
+      padding:10px;
     }
 
     #tabLink {
@@ -58,10 +117,7 @@ td {vertical-align:top;}
       border-right:solid 1px #999;
       margin:0;
     }
-    #loadingImg
-    {
-    	padding-top: 50px;
-    }
+    
     #chartOne{
     	color:#FFF;
     }
@@ -90,26 +146,9 @@ td {vertical-align:top;}
   		stroke: #000;
   		fill:red;
  	}
- 	.tsDot {
-  		stroke: steelblue;
-  		fill:steelblue;
-  		cursor:pointer;
- 	}
- 	.tsChartDot {
-  		stroke: steelblue;
-  		stroke-width: 1px;	
-  		fill:white;
-  		cursor:pointer;
- 	}
- 	.tsChartLine {
- 	  fill: none;
-	  stroke: steelblue;
-	  stroke-width: 2.5px;		
- 	}
  	.invDot {
   		stroke: steelblue;
   		fill:steelblue;
-  		cursor:pointer;
  	}
  	.transectLine {
 	  fill: none;
@@ -117,24 +156,18 @@ td {vertical-align:top;}
 	  stroke-width: 1.5px;
 	}
 	#timeSliderFooter{
-      color:#334453;
+      background:url(../images/chrome_headerbg.png) #969696 repeat-x;
       text-align:center;
-      height:55px;	
-      padding: 0px;
+      height:45px;	
 	}
 
 	#panel{
-		height:0px;
-		padding: 0px;
-	}
-	#eventSliderPanel{
-		height:50px;
-		padding-top: 8px;
+		height:190px;
 	}
     #footer {
       font-size:12px;
       border:solid 1px #999;
-      background-color:rgba(227,233,238,.7);
+      background-color:#e3e9ee;
       -webkit-border-bottom-left-radius:4px;
       -webkit-border-bottom-right-radius:4px;
       -moz-border-radius-bottomleft:4px;
@@ -142,9 +175,9 @@ td {vertical-align:top;}
       border-bottom-left-radius:4px;
       border-bottom-right-radius:4px;
       text-align:center;
-      height:auto;
+      height:235px;
       margin:0;
-      padding:0px 0px 0px;
+      padding:10px 15px 5px;
     }
     .esriScalebar{
       padding-left:15px;
